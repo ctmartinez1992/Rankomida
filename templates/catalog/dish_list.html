@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Francesinha Rankings</h1>
+<div class="card-grid">
+    {% for dish in dishes %}
+        <div class="card">
+            <h2><a href="{% url 'catalog:detail' dish.slug %}">{{ dish.name }}</a></h2>
+            <p class="card-meta">{{ dish.venue.name }} &mdash; {{ dish.venue.city }}</p>
+        </div>
+    {% empty %}
+        <p>No dishes available yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

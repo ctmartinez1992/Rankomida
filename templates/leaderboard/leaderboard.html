@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load ratings_tags %}
+
+{% block content %}
+<h1>Leaderboard</h1>
+
+<nav class="tab-nav">
+  <a href="{% url 'leaderboard:list' %}"{% if not current_dish_type %} aria-current="page"{% endif %}>All</a>
+  {% for dish_type in dish_types %}
+    <a href="{% url 'leaderboard:by_dish_type' dish_type.slug %}"{% if current_dish_type.slug == dish_type.slug %} aria-current="page"{% endif %}>
+      {{ dish_type.name }}
+    </a>
+  {% endfor %}
+</nav>
+
+{% if current_dish_type %}
+  <h2>{{ current_dish_type.name }}</h2>
+{% endif %}
+
+<div class="rank-list">
+  {% for entry in entries %}
+    <div class="rank-entry">
+      <span class="rank-number">{{ forloop.counter }}</span>
+      <div class="rank-name">
+        <div class="dish-name">{{ entry.dish.name }}</div>
+        <div class="venue-name">{{ entry.dish.venue.name }}</div>
+      </div>
+      <span class="score-badge">Score: {{ entry.avg_overall_score|score_as_percentage }} &middot; {{ entry.rating_count }} rating{{ entry.rating_count|pluralize }}</span>
+    </div>
+  {% empty %}
+    <p>No rankings available yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
