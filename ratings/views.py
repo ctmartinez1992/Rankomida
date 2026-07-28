@@ -2,7 +2,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from catalog.models import Dish
-from leaderboard.services import recompute_dish_aggregate
 
 from .forms import RatingSubmissionForm
 from .models import RatingSubmission
@@ -19,7 +18,6 @@ def submit_rating(request, slug):
         form = RatingSubmissionForm(request.POST, dish=dish, submission=existing)
         if form.is_valid():
             form.save(user=request.user)
-            recompute_dish_aggregate(dish)
             return redirect("catalog:detail", slug=dish.slug)
     else:
         form = RatingSubmissionForm(dish=dish, submission=existing)

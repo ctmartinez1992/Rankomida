@@ -25,7 +25,6 @@ class ScoreAsPercentageFilterTests(TestCase):
 
 
 from catalog.models import Dish, DishType, Venue
-from leaderboard.models import DishAggregateScore
 
 from .forms import RatingSubmissionForm
 from .models import CriteriaTemplate, RatingCriterionScore, RatingSubmission
@@ -110,7 +109,7 @@ class AuthenticatedSubmissionIntegrationTests(TestCase):
             max_score=Decimal("10.0"),
         )
 
-    def test_authenticated_submission_updates_leaderboard_snapshot(self):
+    def test_authenticated_submission_creates_rating(self):
         self.client.login(username="tester", password="password12345")
         response = self.client.post(
             reverse("ratings:submit", kwargs={"slug": self.dish.slug}),
@@ -123,9 +122,8 @@ class AuthenticatedSubmissionIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         submission = RatingSubmission.objects.get()
         self.assertEqual(submission.user, self.user)
-        aggregate = DishAggregateScore.objects.get(dish=self.dish)
-        self.assertEqual(aggregate.rating_count, 1)
-        self.assertGreater(aggregate.composite_score, Decimal("0"))
+        self.assertEqual(submission.overall_score, Decimal("8.0"))
+        self.assertEqual(submission.criterion_scores.get(template=self.criterion).score, Decimal("9.0"))
 
 
 class UniqueRatingPerUserTests(TestCase):

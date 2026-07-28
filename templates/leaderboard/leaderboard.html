@@ -15,6 +15,17 @@
 
 {% if current_dish_type %}
   <h2>{{ current_dish_type.name }}</h2>
+
+  {% if criteria_templates %}
+  <nav class="tab-nav tab-nav--criteria">
+    <a href="{% url 'leaderboard:by_dish_type' current_dish_type.slug %}"{% if not current_criterion %} aria-current="page"{% endif %}>Overall</a>
+    {% for ct in criteria_templates %}
+      <a href="{% url 'leaderboard:by_dish_type' current_dish_type.slug %}?criterion={{ ct.key }}"{% if current_criterion.key == ct.key %} aria-current="page"{% endif %}>
+        {{ ct.label }}
+      </a>
+    {% endfor %}
+  </nav>
+  {% endif %}
 {% endif %}
 
 <div class="rank-list">
@@ -22,10 +33,10 @@
     <div class="rank-entry">
       <span class="rank-number">{{ forloop.counter }}</span>
       <div class="rank-name">
-        <div class="dish-name">{{ entry.dish.name }}</div>
-        <div class="venue-name">{{ entry.dish.venue.name }}</div>
+        <div class="dish-name">{{ entry.name }}</div>
+        <div class="venue-name">{{ entry.venue.name }}</div>
       </div>
-      <span class="score-badge">Score: {{ entry.avg_overall_score|score_as_percentage }} &middot; {{ entry.rating_count }} rating{{ entry.rating_count|pluralize }}</span>
+      <span class="score-badge">Score: {{ entry.sort_score|score_as_percentage }} &middot; {{ entry.rating_count }} rating{{ entry.rating_count|pluralize }}</span>
     </div>
   {% empty %}
     <p>No rankings available yet.</p>
