@@ -18,7 +18,7 @@ def submit_rating(request, slug):
         form = RatingSubmissionForm(request.POST, dish=dish, submission=existing)
         if form.is_valid():
             form.save(user=request.user)
-            return redirect("catalog:detail", slug=dish.slug)
+            return redirect("catalog:detail", type_slug=dish.dish_type.slug, slug=dish.slug)
     else:
         form = RatingSubmissionForm(dish=dish, submission=existing)
 

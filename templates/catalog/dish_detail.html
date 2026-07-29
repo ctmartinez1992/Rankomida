@@ -2,11 +2,23 @@
 {% load ratings_tags %}
 
 {% block content %}
+<nav class="breadcrumb">
+    <a href="{% url 'catalog:by_type' dish_type.slug %}">&larr; Back to {{ dish_type.name }}</a>
+</nav>
+
 <div class="detail-card">
+    {% if dish.photo %}
+        <img src="{{ dish.photo.url }}" alt="{{ dish.name }}" class="detail-photo">
+    {% endif %}
     <h1>{{ dish.name }}</h1>
     <ul class="meta-list">
         <li><strong>Dish type:</strong> {{ dish.dish_type.name }}</li>
-        <li><strong>Venue:</strong> {{ dish.venue.name }} &mdash; {{ dish.venue.city }}</li>
+        <li>
+            <strong>Venue:</strong> {{ dish.venue.name }} &mdash; {{ dish.venue.city }}
+            {% if dish.venue.latitude %}
+                <span class="venue-coords">{{ dish.venue.latitude }}, {{ dish.venue.longitude }}</span>
+            {% endif %}
+        </li>
     </ul>
     {% if dish.description %}
         <p class="detail-description">{{ dish.description }}</p>

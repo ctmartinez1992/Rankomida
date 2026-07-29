@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Categories</h1>
+<div class="card-grid">
+    {% for dish_type in dish_types %}
+        <div class="card">
+            {% if dish_type.photo %}
+                <img src="{{ dish_type.photo.url }}" alt="{{ dish_type.name }}" class="card-photo">
+            {% endif %}
+            <h2><a href="{% url 'catalog:by_type' dish_type.slug %}">{{ dish_type.name }}</a></h2>
+            {% if dish_type.description %}
+                <p class="card-meta">{{ dish_type.description }}</p>
+            {% endif %}
+            <p class="card-meta">{{ dish_type.dish_count }} dish{{ dish_type.dish_count|pluralize }}</p>
+        </div>
+    {% empty %}
+        <p>No categories available yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

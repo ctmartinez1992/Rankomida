@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{% url 'catalog:list' %}">&larr; All categories</a>
+</nav>
+
+<h1>{{ dish_type.name }}</h1>
+<div class="card-grid">
+    {% for dish in dishes %}
+        <div class="card">
+            {% if dish.venue.photo %}
+                <img src="{{ dish.venue.photo.url }}" alt="{{ dish.venue.name }}" class="card-photo">
+            {% endif %}
+            <h2><a href="{% url 'catalog:detail' dish_type.slug dish.slug %}">{{ dish.name }}</a></h2>
+            <p class="card-meta">{{ dish.venue.name }} &mdash; {{ dish.venue.city }}</p>
+        </div>
+    {% empty %}
+        <p>No dishes available in this category yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}
