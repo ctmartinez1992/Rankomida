@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load ratings_tags %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{% url 'catalog:list' %}">&larr; Dishes</a>
+</div>
+
+<div class="detail-card">
+    <h1>{{ profile_user.username }}</h1>
+    <p class="card-meta">{{ submissions|length }} rating{{ submissions|length|pluralize }}</p>
+
+    {% if request.user == profile_user %}
+        <a href="{% url 'profile_settings' %}" class="btn" style="margin-top:1rem;display:inline-block;">Profile settings</a>
+    {% endif %}
+</div>
+
+<section class="community-notes" style="margin-top:2rem;">
+    <h2>Ratings</h2>
+    {% if submissions %}
+        <div class="rank-list" style="margin-top:1rem;">
+            {% for submission in submissions %}
+                <div class="rank-entry">
+                    <span class="rank-number">{{ submission.overall_score|score_as_percentage }}</span>
+                    <div class="rank-name">
+                        <div class="dish-name">
+                            <a href="{% url 'catalog:detail' submission.dish.dish_type.slug submission.dish.slug %}">{{ submission.dish.name }}</a>
+                        </div>
+                        <div class="venue-name">{{ submission.dish.venue.name }}</div>
+                    </div>
+                    <span class="score-badge">{{ submission.created_at|date:"d M Y" }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="community-empty">No ratings yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

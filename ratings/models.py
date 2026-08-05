@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from catalog.models import Dish, DishType
+from catalog.models import Dish, DishType, VenueLocation
 
 
 class CriteriaTemplate(models.Model):
@@ -38,6 +38,13 @@ class RatingSubmission(models.Model):
     )
     overall_score = models.DecimalField(max_digits=4, decimal_places=1)
     comment = models.TextField(blank=True, default="")
+    venue_location = models.ForeignKey(
+        VenueLocation,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="rating_submissions",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

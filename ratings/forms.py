@@ -3,7 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.db import transaction
 
-from catalog.models import Dish
+from catalog.models import Dish, VenueLocation
 from .models import RatingCriterionScore, RatingSubmission
 
 
@@ -43,19 +43,45 @@ class RatingSubmissionForm(forms.Form):
                 initial=existing_scores.get(template.id),
             )
 
+        # Venue location field — adapt to number of locations
+        locations = list(dish.venue.locations.all())
+        if len(locations) == 0:
+            pass  # omit entirely
+        elif len(locations) == 1:
+            self.fields["venue_location"] = forms.ModelChoiceField(
+                queryset=VenueLocation.objects.filter(pk=locations[0].pk),
+                required=False,
+                label="Location",
+                widget=forms.HiddenInput(),
+                initial=locations[0],
+            )
+        else:
+            initial_location = submission.venue_location if submission is not None else None
+            self.fields["venue_location"] = forms.ModelChoiceField(
+                queryset=dish.venue.locations.all(),
+                required=False,
+                label="Location (optional)",
+                empty_label="— select location (optional) —",
+                initial=initial_location,
+            )
+
     @staticmethod
     def _field_name(template_id: int) -> str:
         return f"criterion_{template_id}"
 
     @transaction.atomic
     def save(self, user):
+        defaults = {
+            "overall_score": self.cleaned_data["overall_score"],
+            "comment": self.cleaned_data["comment"],
+        }
+        if "venue_location" in self.fields:
+            defaults["venue_location"] = self.cleaned_data.get("venue_location")
+
         submission, _ = RatingSubmission.objects.update_or_create(
             user=user,
             dish=self.dish,
-            defaults={
-                "overall_score": self.cleaned_data["overall_score"],
-                "comment": self.cleaned_data["comment"],
-            },
+            defaults=defaults,
         )
 
         for template in self.criteria_templates:

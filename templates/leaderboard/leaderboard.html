@@ -30,8 +30,8 @@
 
 <div class="rank-list">
   {% for entry in entries %}
-    <div class="rank-entry">
-      <span class="rank-number">{{ forloop.counter }}</span>
+    <div class="rank-entry{% if forloop.counter == 1 %} rank-entry--gold{% elif forloop.counter == 2 %} rank-entry--silver{% elif forloop.counter == 3 %} rank-entry--bronze{% endif %}">
+      <span class="rank-number">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{ forloop.counter }}{% endif %}</span>
       <div class="rank-name">
         <div class="dish-name">{{ entry.name }}</div>
         <div class="venue-name">{{ entry.venue.name }}</div>

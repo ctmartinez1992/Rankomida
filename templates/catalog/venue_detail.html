@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load ratings_tags %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{% url 'catalog:venue_list' %}">&larr; All Venues</a>
+</nav>
+
+<div class="detail-card">
+    {% if venue.photo %}
+        <img src="{{ venue.photo.url }}" alt="{{ venue.name }}" class="detail-photo">
+    {% endif %}
+    <h1>{{ venue.name }}</h1>
+    <ul class="meta-list">
+        <li><strong>City:</strong> {{ venue.city }}</li>
+    </ul>
+    {% with locations=venue.locations.all %}
+    {% if locations %}
+    <ul class="meta-list">
+        {% for location in locations %}
+        <li>
+            {% if location.name %}<strong>{{ location.name }}</strong> — {% endif %}
+            {{ location.city }}{% if location.address %}, {{ location.address }}{% endif %}
+            {% if location.latitude %}
+                <a href="https://www.google.com/maps/dir/?api=1&destination={{ location.latitude }},{{ location.longitude }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="btn">Get Directions</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+</div>
+
+<section style="margin-top:2.5rem;">
+    <h2>Dishes at {{ venue.name }}</h2>
+    {% if dishes %}
+        <div class="card-grid">
+            {% for dish in dishes %}
+                <a href="{% url 'catalog:detail' dish.dish_type.slug dish.slug %}" style="text-decoration:none;color:inherit;">
+                    <div class="card">
+                        {% if dish.photo %}
+                            <img src="{{ dish.photo.url }}" alt="{{ dish.name }}" class="card-photo">
+                        {% endif %}
+                        <h2>{{ dish.name }}</h2>
+                        <p class="card-meta">{{ dish.dish_type.name }}</p>
+                        {% if dish.avg_score is not None %}
+                            <p class="card-meta" style="margin-top:0.4rem;">
+                                <span class="score-badge">{{ dish.avg_score|floatformat:1 }}</span>
+                                &nbsp;{{ dish.rating_count }} rating{{ dish.rating_count|pluralize }}
+                            </p>
+                        {% else %}
+                            <p class="card-meta" style="margin-top:0.4rem;font-style:italic;">No ratings yet</p>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color:var(--color-muted);margin-top:1rem;">No dishes listed for this venue yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

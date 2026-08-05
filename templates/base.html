@@ -21,6 +21,19 @@
             --radius:         8px;
             --shadow:         0 2px 12px rgba(44, 24, 16, 0.08);
             --shadow-hover:   0 4px 20px rgba(44, 24, 16, 0.14);
+
+            /* ── Podium colours ───────────────────────────────── */
+            --color-gold-border:  #D4AF37;
+            --color-gold-bg:      #FFFBEA;
+            --color-gold-text:    #A07D00;
+
+            --color-silver-border: #A8A9AD;
+            --color-silver-bg:     #F5F5F7;
+            --color-silver-text:   #6B6B78;
+
+            --color-bronze-border: #CD7F32;
+            --color-bronze-bg:     #FDF4EC;
+            --color-bronze-text:   #8B4A0F;
         }
 
         /* ── Reset ─────────────────────────────────────────────── */
@@ -354,6 +367,29 @@
             white-space: nowrap;
         }
 
+        /* ── Podium entries ────────────────────────────────────── */
+        .rank-entry--gold {
+            border-color: var(--color-gold-border);
+            background: var(--color-gold-bg);
+        }
+        .rank-entry--gold .rank-number {
+            color: var(--color-gold-text);
+        }
+        .rank-entry--silver {
+            border-color: var(--color-silver-border);
+            background: var(--color-silver-bg);
+        }
+        .rank-entry--silver .rank-number {
+            color: var(--color-silver-text);
+        }
+        .rank-entry--bronze {
+            border-color: var(--color-bronze-border);
+            background: var(--color-bronze-bg);
+        }
+        .rank-entry--bronze .rank-number {
+            color: var(--color-bronze-text);
+        }
+
         /* ── Photos ────────────────────────────────────────────── */
         .card-photo {
             width: 100%;
@@ -417,9 +453,10 @@
             <a href="{% url 'catalog:list' %}" class="nav-brand">Rank O Mida</a>
             <ul class="nav-links">
                 <li><a href="{% url 'catalog:list' %}">Dishes</a></li>
+                <li><a href="{% url 'catalog:venue_list' %}">Venues</a></li>
                 <li><a href="{% url 'leaderboard:list' %}">Leaderboard</a></li>
                 {% if user.is_authenticated %}
-                    <li class="nav-user">{{ user.username }}</li>
+                    <li class="nav-user"><a href="{% url 'profile' user.username %}">{{ user.username }}</a></li>
                     <li class="nav-action">
                         <form method="post" action="{% url 'logout' %}">
                             {% csrf_token %}

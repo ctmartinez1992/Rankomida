@@ -1,8 +1,8 @@
-from django.db.models import Count, Q
+from django.db.models import Avg, Count, Q
 from django.shortcuts import get_object_or_404
 from django.views.generic import DetailView, ListView
 
-from .models import Dish, DishType
+from .models import Dish, DishType, Venue
 from ratings.models import RatingSubmission
 
 
@@ -60,4 +60,55 @@ class DishDetailView(DetailView):
             .order_by("-created_at")
         )
         context["dish_type"] = self.object.dish_type
+        return context
+
+
+class VenueListView(ListView):
+    model = Venue
+    template_name = "catalog/venue_list.html"
+    context_object_name = "venues"
+
+    def get_queryset(self):
+        qs = (
+            Venue.objects
+            .annotate(dish_count=Count("dishes", filter=Q(dishes__is_published=True)))
+        )
+        city = self.request.GET.get("city", "").strip()
+        if city:
+            qs = qs.filter(city=city)
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(name__icontains=q)
+        if self.request.GET.get("sort") == "dishes":
+            qs = qs.order_by("-dish_count")
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["cities"] = (
+            Venue.objects.values_list("city", flat=True).distinct().order_by("city")
+        )
+        context["selected_city"] = self.request.GET.get("city", "")
+        context["search_q"] = self.request.GET.get("q", "")
+        context["sort"] = self.request.GET.get("sort", "")
+        return context
+
+
+class VenueDetailView(DetailView):
+    model = Venue
+    template_name = "catalog/venue_detail.html"
+    context_object_name = "venue"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["dishes"] = (
+            Dish.objects
+            .filter(venue=self.object, is_published=True)
+            .select_related("dish_type")
+            .annotate(
+                avg_score=Avg("rating_submissions__overall_score"),
+                rating_count=Count("rating_submissions", distinct=True),
+            )
+            .order_by("name")
+        )
         return context

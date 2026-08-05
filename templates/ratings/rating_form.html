@@ -8,11 +8,15 @@
         {% csrf_token %}
         {{ form.non_field_errors }}
         {% for field in form %}
+            {% if field.is_hidden %}
+                {{ field }}
+            {% else %}
             <div class="form-group">
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
                 {{ field.errors }}
             </div>
+            {% endif %}
         {% endfor %}
         <button type="submit" class="btn btn-primary">Submit rating</button>
     </form>

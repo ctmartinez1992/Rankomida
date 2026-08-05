@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Dish, DishType, Venue
+from .models import Dish, DishType, Venue, VenueLocation
 
 
 @admin.register(DishType)
@@ -11,11 +11,17 @@ class DishTypeAdmin(admin.ModelAdmin):
     fields = ("name", "slug", "description", "is_active", "photo")
 
 
+class VenueLocationInline(admin.StackedInline):
+    model = VenueLocation
+    extra = 1
+
+
 @admin.register(Venue)
 class VenueAdmin(admin.ModelAdmin):
     list_display = ("name", "city", "slug")
     search_fields = ("name", "city", "slug")
-    fields = ("name", "slug", "city", "address", "photo", "latitude", "longitude")
+    fields = ("name", "slug", "city", "photo")
+    inlines = [VenueLocationInline]
 
 
 @admin.register(Dish)

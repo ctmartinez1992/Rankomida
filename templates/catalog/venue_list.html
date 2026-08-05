@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Venues</h1>
+
+<form method="get" style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:flex-end;margin:1.5rem 0 2rem;">
+    <div class="form-group" style="margin:0;min-width:160px;">
+        <label for="city-filter">City</label>
+        <select id="city-filter" name="city">
+            <option value="">All cities</option>
+            {% for city in cities %}
+                <option value="{{ city }}"{% if city == selected_city %} selected{% endif %}>{{ city }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+        <label for="venue-search">Search by name</label>
+        <input type="text" id="venue-search" name="q" value="{{ search_q }}" placeholder="e.g. Casa Botín">
+    </div>
+
+    <div class="form-group" style="margin:0;min-width:160px;">
+        <label for="sort-select">Sort by</label>
+        <select id="sort-select" name="sort">
+            <option value=""{% if sort == "" %} selected{% endif %}>Name (A–Z)</option>
+            <option value="dishes"{% if sort == "dishes" %} selected{% endif %}>Most dishes</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="margin-bottom:0.375rem;">Filter</button>
+    {% if selected_city or search_q or sort %}
+        <a href="{% url 'catalog:venue_list' %}" class="btn" style="margin-bottom:0.375rem;border-color:var(--color-border);color:var(--color-muted);">Clear</a>
+    {% endif %}
+</form>
+
+{% if venues %}
+    <div class="card-grid">
+        {% for venue in venues %}
+            <a href="{% url 'catalog:venue_detail' venue.slug %}" style="text-decoration:none;color:inherit;">
+                <div class="card">
+                    {% if venue.photo %}
+                        <img src="{{ venue.photo.url }}" alt="{{ venue.name }}" class="card-photo">
+                    {% endif %}
+                    <h2>{{ venue.name }}</h2>
+                    <p class="card-meta">{{ venue.city }}</p>
+                    <p class="card-meta">{{ venue.dish_count }} dish{{ venue.dish_count|pluralize }}</p>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <p style="color:var(--color-muted);margin-top:2rem;">No venues found{% if selected_city or search_q %} matching your filters{% endif %}.</p>
+{% endif %}
+{% endblock %}

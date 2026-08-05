@@ -14,10 +14,23 @@
     <ul class="meta-list">
         <li><strong>Dish type:</strong> {{ dish.dish_type.name }}</li>
         <li>
-            <strong>Venue:</strong> {{ dish.venue.name }} &mdash; {{ dish.venue.city }}
-            {% if dish.venue.latitude %}
-                <span class="venue-coords">{{ dish.venue.latitude }}, {{ dish.venue.longitude }}</span>
+            <strong>Venue:</strong> <a href="{% url 'catalog:venue_detail' dish.venue.slug %}">{{ dish.venue.name }}</a> &mdash; {{ dish.venue.city }}
+            {% with locations=dish.venue.locations.all %}
+            {% if locations %}
+            <ul class="venue-locations-compact">
+                {% for location in locations %}
+                <li>
+                    {% if location.name %}{{ location.name }}: {% endif %}
+                    {{ location.city }}{% if location.address %}, {{ location.address }}{% endif %}
+                    {% if location.latitude %}
+                        <a href="https://www.google.com/maps/dir/?api=1&destination={{ location.latitude }},{{ location.longitude }}"
+                           target="_blank" rel="noopener noreferrer" class="btn btn-sm">Get Directions</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
             {% endif %}
+            {% endwith %}
         </li>
     </ul>
     {% if dish.description %}
@@ -34,7 +47,10 @@
                 <div class="rank-entry">
                     <span class="rank-number">Score: {{ submission.overall_score|score_as_percentage }}</span>
                     <div class="rank-name">
-                        <div class="dish-name">{{ submission.user.username }}</div>
+                        <div class="dish-name"><a href="{% url 'profile' submission.user.username %}">{{ submission.user.username }}</a></div>
+                        {% if submission.venue_location %}
+                            <div class="venue-name community-location">{{ submission.venue_location }}</div>
+                        {% endif %}
                         {% if submission.comment %}
                             <div class="venue-name community-comment">{{ submission.comment }}</div>
                         {% endif %}
