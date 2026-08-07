@@ -1,32 +1,41 @@
 {% load ratings_tags %}
 
-<div class="community-notes-sort">
+<div class="filter-bar">
     {% with base_url=dish.get_absolute_url|default:"" %}
-    {% for label, key in sort_options %}
-        <button
-            class="btn btn-sm{% if current_sort == key %} btn-active{% endif %}"
-            hx-get="{% url 'catalog:community_notes_fragment' dish.dish_type.slug dish.slug %}?sort={{ key }}&page=1"
+    <div class="filter-item">
+        <label for="community-sort-select">Sort by</label>
+        <select
+            id="community-sort-select"
+            name="sort"
+            hx-get="{% url 'catalog:community_notes_fragment' dish.dish_type.slug dish.slug %}"
+            hx-trigger="change"
             hx-target="#community-notes"
             hx-swap="innerHTML"
-        >{{ label }}</button>
-    {% endfor %}
+            hx-vals='{"page": "1"}'
+        >
+            {% for label, key in sort_options %}
+                <option value="{{ key }}"{% if current_sort == key %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
     {% endwith %}
 </div>
 
 {% if page_obj.object_list %}
-    <div class="rank-list">
+    <div class="rank-list" style="margin-top:1rem;">
         {% for submission in page_obj %}
-            <div class="rank-entry">
-                <span class="rank-number">Score: {{ submission.overall_score|score_as_stars }}</span>
+            <div class="rank-entry" style="flex-wrap:wrap;">
+                <span class="rank-number">{{ submission.overall_score|score_as_stars }}</span>
                 <div class="rank-name">
                     <div class="dish-name"><a href="{% url 'profile' submission.user.username %}">{{ submission.user.username }}</a></div>
                     {% if submission.venue_location %}
-                        <div class="venue-name community-location">{{ submission.venue_location }}</div>
-                    {% endif %}
-                    {% if submission.comment %}
-                        <div class="venue-name community-comment">{{ submission.comment }}</div>
+                        <div class="venue-name">{{ submission.venue_location }}</div>
                     {% endif %}
                 </div>
+                <span class="score-badge">{{ submission.created_at|date:"d M Y, H:i" }}</span>
+                {% if submission.comment %}
+                    <p class="rating-comment" style="width:100%;margin:0.4rem 0 0;overflow-wrap:break-word;word-break:break-word;">{{ submission.comment }}</p>
+                {% endif %}
             </div>
         {% endfor %}
     </div>
