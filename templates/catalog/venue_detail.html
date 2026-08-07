@@ -43,7 +43,7 @@
                     <p class="card-meta">{{ dish.dish_type.name }}</p>
                     {% if dish.avg_score is not None %}
                         <p class="card-meta" style="margin-top:0.4rem;">
-                            <span class="score-badge">{{ dish.avg_score|floatformat:1 }}</span>
+                            <span class="score-badge" title="{{ dish.avg_score|mul:10|floatformat:0 }}%">{{ dish.avg_score|mul:10|score_as_stars_pct }}</span>
                             &nbsp;{{ dish.rating_count }} rating{{ dish.rating_count|pluralize }}
                         </p>
                     {% else %}

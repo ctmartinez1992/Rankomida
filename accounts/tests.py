@@ -78,3 +78,57 @@ class ProfileRatingsFragmentViewTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertIn("page_obj", response.context)
+
+
+class ProfileRatingsDishTypeFilterTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="filterowner", password="testpass")
+        UserProfile.objects.get_or_create(user=self.owner, defaults={"is_public": True})
+        self.url = "/accounts/profile/filterowner/ratings/"
+
+        self.dt_a = DishType.objects.create(name="TypeA", slug="type-a", is_active=True)
+        self.dt_b = DishType.objects.create(name="TypeB", slug="type-b", is_active=True)
+        venue = Venue.objects.create(name="Venue", slug="venue-filter", city="Porto")
+
+        self.dish_a = Dish.objects.create(
+            name="DishA", slug="dish-a", dish_type=self.dt_a, venue=venue, is_published=True
+        )
+        self.dish_b = Dish.objects.create(
+            name="DishB", slug="dish-b", dish_type=self.dt_b, venue=venue, is_published=True
+        )
+        RatingSubmission.objects.create(dish=self.dish_a, user=self.owner, overall_score=3.0)
+        RatingSubmission.objects.create(dish=self.dish_b, user=self.owner, overall_score=4.0)
+
+    def test_no_dish_type_param_returns_all_ratings(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].paginator.count, 2)
+
+    def test_dish_type_filter_returns_only_matching_ratings(self):
+        response = self.client.get(self.url + "?dish_type=type-a")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].paginator.count, 1)
+        self.assertEqual(response.context["page_obj"].object_list[0].dish, self.dish_a)
+
+    def test_unknown_dish_type_slug_falls_back_to_all(self):
+        response = self.client.get(self.url + "?dish_type=nonexistent")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].paginator.count, 2)
+        self.assertEqual(response.context["current_dish_type"], "")
+
+    def test_dish_types_context_contains_only_rated_types(self):
+        DishType.objects.create(name="TypeC", slug="type-c", is_active=True)
+        response = self.client.get(self.url)
+        slugs = [dt.slug for dt in response.context["dish_types"]]
+        self.assertIn("type-a", slugs)
+        self.assertIn("type-b", slugs)
+        self.assertNotIn("type-c", slugs)
+
+    def test_filter_bar_hidden_when_only_one_dish_type(self):
+        RatingSubmission.objects.filter(dish=self.dish_b).delete()
+        response = self.client.get(self.url)
+        self.assertNotContains(response, "dish_type=type-a")
+
+    def test_current_dish_type_in_context(self):
+        response = self.client.get(self.url + "?dish_type=type-b")
+        self.assertEqual(response.context["current_dish_type"], "type-b")

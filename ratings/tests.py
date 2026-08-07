@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .templatetags.ratings_tags import score_as_stars
+from .templatetags.ratings_tags import score_as_stars, score_as_stars_pct
 from .widgets import StarRatingField
 
 
@@ -37,7 +37,46 @@ class ScoreAsStarsFilterTests(TestCase):
         self.assertEqual(score_as_stars(Decimal("0")), "–")
 
 
-class StarRatingFieldTests(TestCase):
+class ScoreAsStarsPctFilterTests(TestCase):
+    def test_none_returns_dash(self):
+        self.assertEqual(score_as_stars_pct(None), "–")
+
+    def test_zero_returns_dash(self):
+        self.assertEqual(score_as_stars_pct(0), "–")
+
+    def test_low_boundary_returns_dash(self):
+        self.assertEqual(score_as_stars_pct(4), "–")
+
+    def test_half_star_lower_boundary(self):
+        self.assertEqual(score_as_stars_pct(5), "½☆☆☆☆")
+
+    def test_half_star_upper_boundary(self):
+        self.assertEqual(score_as_stars_pct(15), "½☆☆☆☆")
+
+    def test_one_star_lower_boundary(self):
+        self.assertEqual(score_as_stars_pct(16), "★☆☆☆☆")
+
+    def test_four_and_half_stars_lower_boundary(self):
+        self.assertEqual(score_as_stars_pct(86), "★★★★½")
+
+    def test_four_and_half_stars_upper_boundary(self):
+        self.assertEqual(score_as_stars_pct(95), "★★★★½")
+
+    def test_five_stars_lower_boundary(self):
+        self.assertEqual(score_as_stars_pct(96), "★★★★★")
+
+    def test_five_stars_at_100(self):
+        self.assertEqual(score_as_stars_pct(100), "★★★★★")
+
+    def test_mid_range_value(self):
+        # 4.3 * 20 = 86.0 → ★★★★½
+        self.assertEqual(score_as_stars_pct(86.0), "★★★★½")
+
+    def test_three_stars(self):
+        self.assertEqual(score_as_stars_pct(60), "★★★☆☆")
+
+
+
     def setUp(self):
         self.field = StarRatingField(required=True)
 

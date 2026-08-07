@@ -1,20 +1,47 @@
 {% load ratings_tags %}
 
-<div class="community-notes-sort">
-    {% for label, key in sort_options %}
-        <button
-            class="btn btn-sm{% if current_sort == key %} btn-active{% endif %}"
-            hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ key }}&page=1"
+<div class="filter-bar">
+    {% if dish_types|length > 1 %}
+    <div class="filter-item">
+        <label for="dishtype-select">Dish type</label>
+        <select
+            id="dishtype-select"
+            name="dish_type"
+            hx-get="{% url 'profile_ratings_fragment' profile_user.username %}"
+            hx-trigger="change"
             hx-target="#profile-ratings"
             hx-swap="innerHTML"
-        >{{ label }}</button>
-    {% endfor %}
+            hx-vals='js:{"sort": document.getElementById("sort-select").value, "page": "1"}'
+        >
+            <option value=""{% if not current_dish_type %} selected{% endif %}>All</option>
+            {% for dt in dish_types %}
+                <option value="{{ dt.slug }}"{% if current_dish_type == dt.slug %} selected{% endif %}>{{ dt.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    <div class="filter-item">
+        <label for="sort-select">Sort by</label>
+        <select
+            id="sort-select"
+            name="sort"
+            hx-get="{% url 'profile_ratings_fragment' profile_user.username %}"
+            hx-trigger="change"
+            hx-target="#profile-ratings"
+            hx-swap="innerHTML"
+            hx-vals='js:{"dish_type": (document.getElementById("dishtype-select") || {value: ""}).value, "page": "1"}'
+        >
+            {% for label, key in sort_options %}
+                <option value="{{ key }}"{% if current_sort == key %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
 </div>
 
 {% if page_obj.object_list %}
     <div class="rank-list" style="margin-top:1rem;">
         {% for submission in page_obj %}
-            <div class="rank-entry">
+            <div class="rank-entry" style="flex-wrap:wrap;">
                 <span class="rank-number">{{ submission.overall_score|score_as_stars }}</span>
                 <div class="rank-name">
                     <div class="dish-name">
@@ -22,7 +49,10 @@
                     </div>
                     <div class="venue-name">{{ submission.dish.venue.name }}</div>
                 </div>
-                <span class="score-badge">{{ submission.created_at|date:"d M Y" }}</span>
+                <span class="score-badge">{{ submission.created_at|date:"d M Y, H:i" }}</span>
+                {% if submission.comment %}
+                    <p class="rating-comment" style="width:100%;margin:0.4rem 0 0;overflow-wrap:break-word;word-break:break-word;">{{ submission.comment|truncatewords:100 }}</p>
+                {% endif %}
             </div>
         {% endfor %}
     </div>
@@ -32,7 +62,7 @@
         {% if page_obj.has_previous %}
             <button
                 class="btn btn-sm"
-                hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ current_sort }}&page={{ page_obj.previous_page_number }}"
+                hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ current_sort }}&dish_type={{ current_dish_type }}&page={{ page_obj.previous_page_number }}"
                 hx-target="#profile-ratings"
                 hx-swap="innerHTML"
             >&larr; Prev</button>
@@ -41,7 +71,7 @@
         {% if page_obj.has_next %}
             <button
                 class="btn btn-sm"
-                hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ current_sort }}&page={{ page_obj.next_page_number }}"
+                hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ current_sort }}&dish_type={{ current_dish_type }}&page={{ page_obj.next_page_number }}"
                 hx-target="#profile-ratings"
                 hx-swap="innerHTML"
             >Next &rarr;</button>

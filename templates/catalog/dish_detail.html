@@ -36,7 +36,7 @@
     {% endif %}
     <div class="rating-summary">
         {% if dish.rating_count %}
-            <span class="rating-avg">★ {{ dish.avg_score|floatformat:1 }}</span>
+            <span class="rating-avg" title="{{ dish.avg_score|mul:10|floatformat:0 }}%">{{ dish.avg_score|mul:10|score_as_stars_pct }}</span>
             <span class="rating-count">({{ dish.rating_count }} rating{{ dish.rating_count|pluralize }})</span>
         {% else %}
             <span class="rating-none">No ratings yet</span>

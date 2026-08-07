@@ -11,6 +11,7 @@ from django.views import View
 
 from .forms import RegistrationForm
 from .models import UserProfile
+from catalog.models import DishType
 from ratings.models import RatingSubmission
 
 logger = logging.getLogger(__name__)
@@ -80,11 +81,23 @@ class ProfileRatingsFragmentView(View):
         if sort not in _SORT_ORDERS:
             sort = "newest"
 
-        qs = (
-            RatingSubmission.objects
-            .filter(user=profile_user)
-            .select_related("dish", "dish__venue", "dish__dish_type")
-            .order_by(_SORT_ORDERS[sort])
+        dish_type_slug = request.GET.get("dish_type", "")
+
+        qs = RatingSubmission.objects.filter(user=profile_user)
+
+        if dish_type_slug:
+            if DishType.objects.filter(slug=dish_type_slug, is_active=True).exists():
+                qs = qs.filter(dish__dish_type__slug=dish_type_slug)
+            else:
+                dish_type_slug = ""
+
+        qs = qs.select_related("dish", "dish__venue", "dish__dish_type").order_by(_SORT_ORDERS[sort])
+
+        dish_types = (
+            DishType.objects
+            .filter(dishes__rating_submissions__user=profile_user, is_active=True)
+            .distinct()
+            .order_by("name")
         )
 
         page_size = getattr(django_settings, "COMMUNITY_NOTES_PAGE_SIZE", 10)
@@ -95,6 +108,8 @@ class ProfileRatingsFragmentView(View):
             "profile_user": profile_user,
             "page_obj": page_obj,
             "current_sort": sort,
+            "current_dish_type": dish_type_slug,
+            "dish_types": dish_types,
             "sort_options": [
                 ("Newest", "newest"),
                 ("Oldest", "oldest"),
