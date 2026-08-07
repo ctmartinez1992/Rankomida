@@ -1,3 +1,5 @@
+import logging
+
 from django import forms
 from django.conf import settings as django_settings
 from django.contrib.auth import login
@@ -10,6 +12,8 @@ from django.views import View
 from .forms import RegistrationForm
 from .models import UserProfile
 from ratings.models import RatingSubmission
+
+logger = logging.getLogger(__name__)
 
 
 class ProfileVisibilityForm(forms.ModelForm):
@@ -25,6 +29,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+            logger.info("accounts.registered user_id=%s", user.id)
             return redirect("catalog:list")
     else:
         form = RegistrationForm()
@@ -37,6 +42,11 @@ def profile(request, username):
         user=profile_user, defaults={"is_public": True}
     )
     if not userprofile.is_public and request.user != profile_user:
+        logger.debug(
+            "accounts.profile_private_blocked viewer=%s target=%s",
+            request.user,
+            profile_user.username,
+        )
         return render(request, "accounts/profile_private.html", {"profile_user": profile_user})
 
     rating_count = RatingSubmission.objects.filter(user=profile_user).count()
@@ -103,6 +113,11 @@ def profile_settings(request):
         form = ProfileVisibilityForm(request.POST, instance=userprofile)
         if form.is_valid():
             form.save()
+            logger.info(
+                "accounts.visibility_changed user_id=%s is_public=%s",
+                request.user.id,
+                form.instance.is_public,
+            )
             return redirect("profile", username=request.user.username)
     else:
         form = ProfileVisibilityForm(instance=userprofile)

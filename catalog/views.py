@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings as django_settings
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
@@ -7,6 +9,8 @@ from django.views.generic import DetailView, ListView
 
 from .models import Dish, DishType, Venue
 from ratings.models import RatingSubmission
+
+logger = logging.getLogger(__name__)
 
 
 class DishTypeListView(ListView):

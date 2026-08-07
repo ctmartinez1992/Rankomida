@@ -1,8 +1,12 @@
+import logging
+
 from django.db.models import Avg, Count, Q
 from django.views.generic import ListView
 
 from catalog.models import Dish, DishType
 from ratings.models import CriteriaTemplate
+
+logger = logging.getLogger(__name__)
 
 
 class LeaderboardListView(ListView):
@@ -13,11 +17,22 @@ class LeaderboardListView(ListView):
         key = self.request.GET.get("criterion", "").strip()
         if not key or dish_type is None:
             return None
-        return (
-            CriteriaTemplate.objects.filter(
-                dish_type=dish_type, key=key, is_active=True
-            ).first()
-        )
+        criterion = CriteriaTemplate.objects.filter(
+            dish_type=dish_type, key=key, is_active=True
+        ).first()
+        if criterion is None:
+            logger.warning(
+                "leaderboard.criterion_not_found dish_type=%s key=%s",
+                dish_type.slug if dish_type else None,
+                key,
+            )
+        else:
+            logger.debug(
+                "leaderboard.criterion_resolved dish_type=%s key=%s",
+                dish_type.slug,
+                key,
+            )
+        return criterion
 
     def get_queryset(self):
         slug = self.kwargs.get("dish_type_slug")

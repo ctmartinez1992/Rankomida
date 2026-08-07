@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from django import forms
@@ -6,6 +7,8 @@ from django.db import transaction
 from catalog.models import Dish, VenueLocation
 from .models import RatingCriterionScore, RatingSubmission
 from .widgets import StarRatingField
+
+logger = logging.getLogger(__name__)
 
 
 class RatingSubmissionForm(forms.Form):
@@ -77,10 +80,16 @@ class RatingSubmissionForm(forms.Form):
         if "venue_location" in self.fields:
             defaults["venue_location"] = self.cleaned_data.get("venue_location")
 
-        submission, _ = RatingSubmission.objects.update_or_create(
+        submission, created = RatingSubmission.objects.update_or_create(
             user=user,
             dish=self.dish,
             defaults=defaults,
+        )
+        logger.info(
+            "rating.saved user_id=%s dish_slug=%s action=%s",
+            user.id,
+            self.dish.slug,
+            "create" if created else "update",
         )
 
         for template in self.criteria_templates:
