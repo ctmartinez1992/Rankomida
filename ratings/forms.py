@@ -5,10 +5,11 @@ from django.db import transaction
 
 from catalog.models import Dish, VenueLocation
 from .models import RatingCriterionScore, RatingSubmission
+from .widgets import StarRatingField
 
 
 class RatingSubmissionForm(forms.Form):
-    overall_score = forms.DecimalField(min_value=Decimal("1.0"), max_value=Decimal("10.0"))
+    overall_score = StarRatingField(label="Overall rating")
     comment = forms.CharField(
         required=False,
         max_length=500,
@@ -35,10 +36,8 @@ class RatingSubmissionForm(forms.Form):
             existing_scores = {}
 
         for template in self.criteria_templates:
-            self.fields[self._field_name(template.id)] = forms.DecimalField(
+            self.fields[self._field_name(template.id)] = StarRatingField(
                 label=template.label,
-                min_value=template.min_score,
-                max_value=template.max_score,
                 required=template.is_required,
                 initial=existing_scores.get(template.id),
             )

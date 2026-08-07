@@ -1,5 +1,8 @@
+from django.conf import settings as django_settings
+from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
+from django.views import View
 from django.views.generic import DetailView, ListView
 
 from .models import Dish, DishType, Venue
@@ -49,18 +52,68 @@ class DishDetailView(DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
-        return Dish.objects.select_related("dish_type", "venue").filter(is_published=True)
+        return (
+            Dish.objects
+            .select_related("dish_type", "venue")
+            .filter(is_published=True)
+            .annotate(
+                avg_score=Avg("rating_submissions__overall_score"),
+                rating_count=Count("rating_submissions", distinct=True),
+            )
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["rating_submissions"] = (
-            RatingSubmission.objects
-            .filter(dish=self.object)
-            .select_related("user")
-            .order_by("-created_at")
-        )
         context["dish_type"] = self.object.dish_type
         return context
+
+
+_SORT_ORDERS = {
+    "newest": "-created_at",
+    "oldest": "created_at",
+    "highest": "-overall_score",
+    "lowest": "overall_score",
+}
+
+
+class CommunityNotesFragmentView(View):
+    template_name = "catalog/_community_notes.html"
+
+    def get(self, request, type_slug, slug):
+        dish = get_object_or_404(
+            Dish.objects.select_related("dish_type", "venue"),
+            slug=slug,
+            dish_type__slug=type_slug,
+            is_published=True,
+        )
+        sort = request.GET.get("sort", "newest")
+        if sort not in _SORT_ORDERS:
+            sort = "newest"
+        ordering = _SORT_ORDERS[sort]
+
+        qs = (
+            RatingSubmission.objects
+            .filter(dish=dish)
+            .select_related("user", "venue_location")
+            .order_by(ordering)
+        )
+
+        page_size = getattr(django_settings, "COMMUNITY_NOTES_PAGE_SIZE", 10)
+        paginator = Paginator(qs, page_size)
+        page_number = request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
+
+        return render(request, self.template_name, {
+            "dish": dish,
+            "page_obj": page_obj,
+            "current_sort": sort,
+            "sort_options": [
+                ("Newest", "newest"),
+                ("Oldest", "oldest"),
+                ("Highest", "highest"),
+                ("Lowest", "lowest"),
+            ],
+        })
 
 
 class VenueListView(ListView):

@@ -34,30 +34,24 @@
     {% if dish.description %}
         <p class="detail-description">{{ dish.description }}</p>
     {% endif %}
+    <div class="rating-summary">
+        {% if dish.rating_count %}
+            <span class="rating-avg">★ {{ dish.avg_score|floatformat:1 }}</span>
+            <span class="rating-count">({{ dish.rating_count }} rating{{ dish.rating_count|pluralize }})</span>
+        {% else %}
+            <span class="rating-none">No ratings yet</span>
+        {% endif %}
+    </div>
     <a href="{% url 'ratings:submit' dish.slug %}" class="btn btn-primary">Rate this dish</a>
 </div>
 
 <section class="community-notes">
     <h2>Community Notes</h2>
-    {% if rating_submissions %}
-        <div class="rank-list">
-            {% for submission in rating_submissions %}
-                <div class="rank-entry">
-                    <span class="rank-number">Score: {{ submission.overall_score|score_as_percentage }}</span>
-                    <div class="rank-name">
-                        <div class="dish-name"><a href="{% url 'profile' submission.user.username %}">{{ submission.user.username }}</a></div>
-                        {% if submission.venue_location %}
-                            <div class="venue-name community-location">{{ submission.venue_location }}</div>
-                        {% endif %}
-                        {% if submission.comment %}
-                            <div class="venue-name community-comment">{{ submission.comment }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="community-empty">No ratings yet. Be the first to rate this dish.</p>
-    {% endif %}
+    <div
+        id="community-notes"
+        hx-get="{% url 'catalog:community_notes_fragment' dish.dish_type.slug dish.slug %}?sort=newest&page=1"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+    ></div>
 </section>
 {% endblock %}

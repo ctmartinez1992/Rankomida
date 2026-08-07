@@ -10,4 +10,5 @@ urlpatterns = [
     path("venues/<slug:slug>/", views.VenueDetailView.as_view(), name="venue_detail"),
     path("dishes/<slug:type_slug>/", views.DishByTypeView.as_view(), name="by_type"),
     path("dishes/<slug:type_slug>/<slug:slug>/", views.DishDetailView.as_view(), name="detail"),
+    path("dishes/<slug:type_slug>/<slug:slug>/notes/", views.CommunityNotesFragmentView.as_view(), name="community_notes_fragment"),
 ]

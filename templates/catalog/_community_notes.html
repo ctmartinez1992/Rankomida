@@ -1,0 +1,57 @@
+{% load ratings_tags %}
+
+<div class="community-notes-sort">
+    {% with base_url=dish.get_absolute_url|default:"" %}
+    {% for label, key in sort_options %}
+        <button
+            class="btn btn-sm{% if current_sort == key %} btn-active{% endif %}"
+            hx-get="{% url 'catalog:community_notes_fragment' dish.dish_type.slug dish.slug %}?sort={{ key }}&page=1"
+            hx-target="#community-notes"
+            hx-swap="innerHTML"
+        >{{ label }}</button>
+    {% endfor %}
+    {% endwith %}
+</div>
+
+{% if page_obj.object_list %}
+    <div class="rank-list">
+        {% for submission in page_obj %}
+            <div class="rank-entry">
+                <span class="rank-number">Score: {{ submission.overall_score|score_as_stars }}</span>
+                <div class="rank-name">
+                    <div class="dish-name"><a href="{% url 'profile' submission.user.username %}">{{ submission.user.username }}</a></div>
+                    {% if submission.venue_location %}
+                        <div class="venue-name community-location">{{ submission.venue_location }}</div>
+                    {% endif %}
+                    {% if submission.comment %}
+                        <div class="venue-name community-comment">{{ submission.comment }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="community-pagination">
+        {% if page_obj.has_previous %}
+            <button
+                class="btn btn-sm"
+                hx-get="{% url 'catalog:community_notes_fragment' dish.dish_type.slug dish.slug %}?sort={{ current_sort }}&page={{ page_obj.previous_page_number }}"
+                hx-target="#community-notes"
+                hx-swap="innerHTML"
+            >&larr; Prev</button>
+        {% endif %}
+        <span class="pagination-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <button
+                class="btn btn-sm"
+                hx-get="{% url 'catalog:community_notes_fragment' dish.dish_type.slug dish.slug %}?sort={{ current_sort }}&page={{ page_obj.next_page_number }}"
+                hx-target="#community-notes"
+                hx-swap="innerHTML"
+            >Next &rarr;</button>
+        {% endif %}
+    </div>
+    {% endif %}
+{% else %}
+    <p class="community-empty">No ratings yet. Be the first to rate this dish.</p>
+{% endif %}

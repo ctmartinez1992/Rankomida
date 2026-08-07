@@ -1,0 +1,53 @@
+{% load ratings_tags %}
+
+<div class="community-notes-sort">
+    {% for label, key in sort_options %}
+        <button
+            class="btn btn-sm{% if current_sort == key %} btn-active{% endif %}"
+            hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ key }}&page=1"
+            hx-target="#profile-ratings"
+            hx-swap="innerHTML"
+        >{{ label }}</button>
+    {% endfor %}
+</div>
+
+{% if page_obj.object_list %}
+    <div class="rank-list" style="margin-top:1rem;">
+        {% for submission in page_obj %}
+            <div class="rank-entry">
+                <span class="rank-number">{{ submission.overall_score|score_as_stars }}</span>
+                <div class="rank-name">
+                    <div class="dish-name">
+                        <a href="{% url 'catalog:detail' submission.dish.dish_type.slug submission.dish.slug %}">{{ submission.dish.name }}</a>
+                    </div>
+                    <div class="venue-name">{{ submission.dish.venue.name }}</div>
+                </div>
+                <span class="score-badge">{{ submission.created_at|date:"d M Y" }}</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="community-pagination">
+        {% if page_obj.has_previous %}
+            <button
+                class="btn btn-sm"
+                hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ current_sort }}&page={{ page_obj.previous_page_number }}"
+                hx-target="#profile-ratings"
+                hx-swap="innerHTML"
+            >&larr; Prev</button>
+        {% endif %}
+        <span class="pagination-info">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <button
+                class="btn btn-sm"
+                hx-get="{% url 'profile_ratings_fragment' profile_user.username %}?sort={{ current_sort }}&page={{ page_obj.next_page_number }}"
+                hx-target="#profile-ratings"
+                hx-swap="innerHTML"
+            >Next &rarr;</button>
+        {% endif %}
+    </div>
+    {% endif %}
+{% else %}
+    <p class="community-empty">No ratings yet.</p>
+{% endif %}

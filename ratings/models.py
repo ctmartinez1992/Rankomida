@@ -16,8 +16,8 @@ class CriteriaTemplate(models.Model):
     key = models.SlugField(max_length=80)
     label = models.CharField(max_length=120)
     weight = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("1.00"))
-    min_score = models.DecimalField(max_digits=4, decimal_places=1, default=Decimal("1.0"))
-    max_score = models.DecimalField(max_digits=4, decimal_places=1, default=Decimal("10.0"))
+    min_score = models.DecimalField(max_digits=4, decimal_places=1, default=Decimal("0.5"))
+    max_score = models.DecimalField(max_digits=4, decimal_places=1, default=Decimal("5.0"))
     is_required = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 
@@ -74,10 +74,12 @@ class RatingCriterionScore(models.Model):
         unique_together = ("submission", "template")
 
     def clean(self):
+        from decimal import Decimal as D
+        VALID_SCORES = {D("0.5"), D("1"), D("1.5"), D("2"), D("2.5"), D("3"), D("3.5"), D("4"), D("4.5"), D("5")}
         if self.template.dish_type_id != self.submission.dish.dish_type_id:
             raise ValidationError("Criterion template must match the submission dish type.")
-        if self.score < self.template.min_score or self.score > self.template.max_score:
-            raise ValidationError("Criterion score is outside the allowed range.")
+        if self.score is None or D(str(self.score)) not in VALID_SCORES:
+            raise ValidationError("Criterion score must be a half-star value between 0.5 and 5.")
 
     def __str__(self) -> str:
         return f"{self.template.key}: {self.score}"

@@ -482,6 +482,27 @@
             color: var(--color-muted);
             font-size: 0.9rem;
         }
+        .community-notes-sort {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
+        .community-notes-sort .btn-active {
+            background: var(--color-primary);
+            color: #fff;
+            border-color: var(--color-primary);
+        }
+        .community-pagination {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+        .pagination-info {
+            font-size: 0.875rem;
+            color: var(--color-muted);
+        }
 
         footer {
             text-align: center;
@@ -490,7 +511,88 @@
             color: var(--color-muted);
             border-top: 1px solid var(--color-border);
         }
+
+        /* ── Star rating widget ────────────────────────────────── */
+        /*
+         * DOM order: input[5] label[5] input[4.5] label[4.5] ... input[1] label[1]
+         * flex-direction: row-reverse renders them visually as: ★1 ★2 ★3 ★4 ★5
+         * input:checked ~ label fills all subsequent siblings (= lower-value stars, visually left of checked)
+         *
+         * Each star position 2–5 is split into two half-width labels:
+         *   .star-half  (left half, value N-0.5): direction:ltr  + overflow:hidden → shows left half of ★
+         *   .star-full  (right half, value N):    direction:rtl  + overflow:hidden → shows right half of ★
+         * Star 1 is a full-width standalone label (.star-first).
+         */
+        .star-widget {
+            display: inline-flex;
+            flex-direction: row-reverse;
+            font-size: 1.75rem;
+            line-height: 1;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        .star-widget input[type="radio"] {
+            display: none;
+        }
+        /* Shared half-label base */
+        .star-widget label {
+            display: block;
+            width: 0.5em;   /* half of 1 star width */
+            overflow: hidden;
+            color: var(--color-border);
+            cursor: pointer;
+            transition: color 0.1s;
+            font-size: 1.75rem;
+            line-height: 1;
+        }
+        .star-widget label::before {
+            content: '★';
+            display: block;
+            font-size: inherit;
+            line-height: inherit;
+            white-space: nowrap;
+        }
+        /* Left half: ltr alignment clips off the right side */
+        .star-widget label.star-half {
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
+        /* Right half: rtl pushes the character right, overflow hides the left */
+        .star-widget label.star-full {
+            direction: rtl;
+            unicode-bidi: bidi-override;
+        }
+        /* Star 1 standalone: full width */
+        .star-widget label.star-first {
+            width: 1em;
+            direction: ltr;
+            unicode-bidi: normal;
+        }
+        /* Filled state: checked radio fills its label and all subsequent sibling labels */
+        .star-widget input[type="radio"]:checked ~ label {
+            color: var(--color-accent);
+        }
+        /* Hover preview: reset all stars on widget hover, then fill up to hovered position */
+        .star-widget:hover label {
+            color: var(--color-border);
+        }
+        .star-widget label:hover,
+        .star-widget label:hover ~ label {
+            color: var(--color-accent);
+        }
+
+        /* Make star fields sit inline with their text label */
+        .form-group:has(.star-widget) {
+            flex-direction: row;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .form-group:has(.star-widget) > label {
+            white-space: nowrap;
+            min-width: 9rem;
+        }
     </style>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
     <header>

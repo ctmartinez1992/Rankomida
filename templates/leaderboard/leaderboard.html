@@ -36,7 +36,7 @@
         <div class="dish-name">{{ entry.name }}</div>
         <div class="venue-name">{{ entry.venue.name }}</div>
       </div>
-      <span class="score-badge">Score: {{ entry.sort_score|score_as_percentage }} &middot; {{ entry.rating_count }} rating{{ entry.rating_count|pluralize }}</span>
+      <span class="score-badge">Score: {{ entry.sort_score|score_as_stars }} &middot; {{ entry.rating_count }} rating{{ entry.rating_count|pluralize }}</span>
     </div>
   {% empty %}
     <p>No rankings available yet.</p>

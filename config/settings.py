@@ -146,6 +146,8 @@ LOGOUT_REDIRECT_URL = 'catalog:list'
 
 RANKING_OVERALL_WEIGHT = 1.0
 
+COMMUNITY_NOTES_PAGE_SIZE = 10
+
 # --- HTTPS / security headers (applied in production only) ---
 
 if not DEBUG:

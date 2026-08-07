@@ -1,8 +1,11 @@
 from django import forms
+from django.conf import settings as django_settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views import View
 
 from .forms import RegistrationForm
 from .models import UserProfile
@@ -36,17 +39,59 @@ def profile(request, username):
     if not userprofile.is_public and request.user != profile_user:
         return render(request, "accounts/profile_private.html", {"profile_user": profile_user})
 
-    submissions = (
-        RatingSubmission.objects
-        .filter(user=profile_user)
-        .select_related("dish", "dish__venue", "dish__dish_type")
-        .order_by("-created_at")
-    )
+    rating_count = RatingSubmission.objects.filter(user=profile_user).count()
     return render(request, "accounts/profile.html", {
         "profile_user": profile_user,
         "userprofile": userprofile,
-        "submissions": submissions,
+        "rating_count": rating_count,
     })
+
+
+_SORT_ORDERS = {
+    "newest": "-created_at",
+    "oldest": "created_at",
+    "highest": "-overall_score",
+    "lowest": "overall_score",
+}
+
+
+class ProfileRatingsFragmentView(View):
+    template_name = "accounts/_profile_ratings.html"
+
+    def get(self, request, username):
+        profile_user = get_object_or_404(User, username=username)
+        userprofile, _ = UserProfile.objects.get_or_create(
+            user=profile_user, defaults={"is_public": True}
+        )
+        if not userprofile.is_public and request.user != profile_user:
+            return render(request, "accounts/_profile_ratings_private.html", {})
+
+        sort = request.GET.get("sort", "newest")
+        if sort not in _SORT_ORDERS:
+            sort = "newest"
+
+        qs = (
+            RatingSubmission.objects
+            .filter(user=profile_user)
+            .select_related("dish", "dish__venue", "dish__dish_type")
+            .order_by(_SORT_ORDERS[sort])
+        )
+
+        page_size = getattr(django_settings, "COMMUNITY_NOTES_PAGE_SIZE", 10)
+        paginator = Paginator(qs, page_size)
+        page_obj = paginator.get_page(request.GET.get("page", 1))
+
+        return render(request, self.template_name, {
+            "profile_user": profile_user,
+            "page_obj": page_obj,
+            "current_sort": sort,
+            "sort_options": [
+                ("Newest", "newest"),
+                ("Oldest", "oldest"),
+                ("Highest", "highest"),
+                ("Lowest", "lowest"),
+            ],
+        })
 
 
 @login_required
