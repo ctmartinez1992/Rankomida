@@ -1,0 +1,16 @@
+{% if photo %}
+    {% if credit or source_url %}
+        <div class="photo-with-source">
+            <img src="{{ photo.url }}" alt="{{ alt }}" class="{{ css_class }}">
+            <div class="photo-source-overlay">
+                {% if source_url %}
+                    <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{% if credit %}{{ credit }}{% else %}Source{% endif %}</a>
+                {% else %}
+                    <span>{{ credit }}</span>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <img src="{{ photo.url }}" alt="{{ alt }}" class="{{ css_class }}">
+    {% endif %}
+{% endif %}

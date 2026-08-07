@@ -8,7 +8,7 @@ class DishTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "is_active")
     list_filter = ("is_active",)
     search_fields = ("name", "slug")
-    fields = ("name", "slug", "description", "is_active", "photo")
+    fields = ("name", "slug", "description", "is_active", "photo", "photo_credit", "photo_source_url")
 
 
 class VenueLocationInline(admin.StackedInline):
@@ -20,7 +20,7 @@ class VenueLocationInline(admin.StackedInline):
 class VenueAdmin(admin.ModelAdmin):
     list_display = ("name", "city", "slug")
     search_fields = ("name", "city", "slug")
-    fields = ("name", "slug", "city", "photo")
+    fields = ("name", "slug", "city", "photo", "photo_credit", "photo_source_url")
     inlines = [VenueLocationInline]
 
 
@@ -29,4 +29,14 @@ class DishAdmin(admin.ModelAdmin):
     list_display = ("name", "dish_type", "venue", "is_published")
     list_filter = ("dish_type", "is_published")
     search_fields = ("name", "venue__name")
-    fields = ("name", "slug", "dish_type", "venue", "description", "is_published", "photo")
+    fields = (
+        "name",
+        "slug",
+        "dish_type",
+        "venue",
+        "description",
+        "is_published",
+        "photo",
+        "photo_credit",
+        "photo_source_url",
+    )

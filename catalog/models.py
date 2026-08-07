@@ -7,6 +7,8 @@ class DishType(models.Model):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     photo = models.ImageField(upload_to='dish_types/photos/', null=True, blank=True)
+    photo_credit = models.CharField(max_length=255, blank=True)
+    photo_source_url = models.URLField(blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -20,6 +22,8 @@ class Venue(models.Model):
     slug = models.SlugField(max_length=220, unique=True)
     city = models.CharField(max_length=120)
     photo = models.ImageField(upload_to='venues/photos/', null=True, blank=True)
+    photo_credit = models.CharField(max_length=255, blank=True)
+    photo_source_url = models.URLField(blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -64,6 +68,8 @@ class Dish(models.Model):
     description = models.TextField(blank=True)
     is_published = models.BooleanField(default=True)
     photo = models.ImageField(upload_to='dishes/photos/', null=True, blank=True)
+    photo_credit = models.CharField(max_length=255, blank=True)
+    photo_source_url = models.URLField(blank=True)
 
     class Meta:
         ordering = ["name"]

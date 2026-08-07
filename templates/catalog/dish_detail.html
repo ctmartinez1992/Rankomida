@@ -7,9 +7,7 @@
 </nav>
 
 <div class="detail-card">
-    {% if dish.photo %}
-        <img src="{{ dish.photo.url }}" alt="{{ dish.name }}" class="detail-photo">
-    {% endif %}
+    {% include "catalog/_photo.html" with photo=dish.photo alt=dish.name css_class="detail-photo" credit=dish.photo_credit source_url=dish.photo_source_url %}
     <h1>{{ dish.name }}</h1>
     <ul class="meta-list">
         <li><strong>Dish type:</strong> {{ dish.dish_type.name }}</li>

@@ -9,9 +9,7 @@
 <div class="card-grid">
     {% for dish in dishes %}
         <div class="card">
-            {% if dish.venue.photo %}
-                <img src="{{ dish.venue.photo.url }}" alt="{{ dish.venue.name }}" class="card-photo">
-            {% endif %}
+            {% include "catalog/_photo.html" with photo=dish.venue.photo alt=dish.venue.name css_class="card-photo" credit=dish.venue.photo_credit source_url=dish.venue.photo_source_url %}
             <h2><a href="{% url 'catalog:detail' dish_type.slug dish.slug %}">{{ dish.name }}</a></h2>
             <p class="card-meta">{{ dish.venue.name }} &mdash; {{ dish.venue.city }}</p>
         </div>
