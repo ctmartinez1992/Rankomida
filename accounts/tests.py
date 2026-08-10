@@ -132,3 +132,112 @@ class ProfileRatingsDishTypeFilterTests(TestCase):
     def test_current_dish_type_in_context(self):
         response = self.client.get(self.url + "?dish_type=type-b")
         self.assertEqual(response.context["current_dish_type"], "type-b")
+
+
+from django.urls import reverse
+
+from config.recaptcha_test import VALID_CAPTCHA_POST, mock_recaptcha_valid
+
+
+class AuthRecaptchaTests(TestCase):
+    def test_register_page_shows_checkbox_captcha(self):
+        response = self.client.get(reverse("register"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "g-recaptcha")
+        self.assertContains(response, 'data-size="normal"')
+        self.assertNotContains(response, 'data-size="invisible"')
+
+    def test_login_page_shows_checkbox_captcha(self):
+        response = self.client.get(reverse("login"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "g-recaptcha")
+        self.assertContains(response, 'data-size="normal"')
+
+    def test_register_without_captcha_does_not_create_user(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "newbie",
+                "email": "newbie@example.com",
+                "password1": "ComplexPass123!",
+                "password2": "ComplexPass123!",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(User.objects.filter(username="newbie").exists())
+        self.assertIn("captcha", response.context["form"].errors)
+
+    def test_register_with_valid_captcha_creates_user(self):
+        with mock_recaptcha_valid():
+            response = self.client.post(
+                reverse("register"),
+                {
+                    "username": "newbie",
+                    "email": "newbie@example.com",
+                    "password1": "ComplexPass123!",
+                    "password2": "ComplexPass123!",
+                    **VALID_CAPTCHA_POST,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username="newbie").exists())
+
+    def test_login_without_captcha_does_not_authenticate(self):
+        User.objects.create_user(username="member", password="ComplexPass123!")
+        response = self.client.post(
+            reverse("login"),
+            {"username": "member", "password": "ComplexPass123!"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+        self.assertIn("captcha", response.context["form"].errors)
+
+    def test_login_with_valid_captcha_authenticates(self):
+        User.objects.create_user(username="member", password="ComplexPass123!")
+        with mock_recaptcha_valid():
+            response = self.client.post(
+                reverse("login"),
+                {
+                    "username": "member",
+                    "password": "ComplexPass123!",
+                    **VALID_CAPTCHA_POST,
+                },
+            )
+        self.assertEqual(response.status_code, 302)
+        # Follow-up request should be authenticated via session
+        self.assertTrue(self.client.login(username="member", password="ComplexPass123!"))
+
+
+class ProfileSettingsRecaptchaTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="setter", password="pw")
+        UserProfile.objects.get_or_create(user=self.user, defaults={"is_public": True})
+
+    def test_settings_page_uses_invisible_captcha(self):
+        self.client.login(username="setter", password="pw")
+        response = self.client.get(reverse("profile_settings"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-size="invisible"')
+        self.assertNotContains(response, 'data-size="normal"')
+
+    def test_settings_without_captcha_does_not_save(self):
+        self.client.login(username="setter", password="pw")
+        response = self.client.post(
+            reverse("profile_settings"),
+            {"is_public": False},
+        )
+        self.assertEqual(response.status_code, 200)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertTrue(profile.is_public)
+        self.assertIn("captcha", response.context["form"].errors)
+
+    def test_settings_with_valid_captcha_saves(self):
+        self.client.login(username="setter", password="pw")
+        with mock_recaptcha_valid():
+            response = self.client.post(
+                reverse("profile_settings"),
+                {"is_public": False, **VALID_CAPTCHA_POST},
+            )
+        self.assertEqual(response.status_code, 302)
+        profile = UserProfile.objects.get(user=self.user)
+        self.assertFalse(profile.is_public)

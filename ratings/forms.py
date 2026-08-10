@@ -1,8 +1,9 @@
 import logging
-from decimal import Decimal
 
 from django import forms
 from django.db import transaction
+from django_recaptcha.fields import ReCaptchaField
+from django_recaptcha.widgets import ReCaptchaV2Invisible
 
 from catalog.models import Dish, VenueLocation
 from .models import RatingCriterionScore, RatingSubmission
@@ -66,6 +67,8 @@ class RatingSubmissionForm(forms.Form):
                 empty_label="— select location (optional) —",
                 initial=initial_location,
             )
+
+        self.fields["captcha"] = ReCaptchaField(label="", widget=ReCaptchaV2Invisible())
 
     @staticmethod
     def _field_name(template_id: int) -> str:

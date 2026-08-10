@@ -1,6 +1,5 @@
 import logging
 
-from django import forms
 from django.conf import settings as django_settings
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -9,19 +8,12 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
-from .forms import RegistrationForm
+from .forms import ProfileVisibilityForm, RegistrationForm
 from .models import UserProfile
 from catalog.models import DishType
 from ratings.models import RatingSubmission
 
 logger = logging.getLogger(__name__)
-
-
-class ProfileVisibilityForm(forms.ModelForm):
-    class Meta:
-        model = UserProfile
-        fields = ["is_public"]
-        labels = {"is_public": "Make my profile public"}
 
 
 def register(request):

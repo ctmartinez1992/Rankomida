@@ -36,6 +36,19 @@ source .venv/bin/activate && python manage.py makemigrations
 
 Python 3.14 is used. The virtualenv is at `.venv/`.
 
+## Environment
+
+Copy `.env.example` to `.env` for local development. Dokku/production must set secrets via platform config, e.g.:
+
+```bash
+dokku config:set <app> \
+  SECRET_KEY=... \
+  RECAPTCHA_PUBLIC_KEY=... \
+  RECAPTCHA_PRIVATE_KEY=...
+```
+
+`RECAPTCHA_*` are Google reCAPTCHA **v2** keys (checkbox + invisible share one key pair). If unset locally, Google's published test keys are used.
+
 ## Architecture
 
 Django 6 project with SQLite. The config package (`config/`) holds settings, URLs, and WSGI/ASGI. Four apps:

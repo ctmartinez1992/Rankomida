@@ -6,9 +6,13 @@
     <p class="dish-subtitle">{{ dish.venue.name }} &mdash; {{ dish.dish_type.name }}</p>
     <form method="post">
         {% csrf_token %}
+        {{ form.media }}
         {{ form.non_field_errors }}
         {% for field in form %}
-            {% if field.is_hidden %}
+            {% if field.name == "captcha" %}
+                {{ field }}
+                {{ field.errors }}
+            {% elif field.is_hidden %}
                 {{ field }}
             {% else %}
             <div class="form-group">

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_recaptcha',
     'catalog',
     'ratings',
     'leaderboard',
@@ -147,6 +148,16 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'catalog:list'
 LOGOUT_REDIRECT_URL = 'catalog:list'
+
+# Google reCAPTCHA v2 (checkbox on auth; invisible on rating/settings).
+# Google's published test keys (always pass) for local/CI when unset:
+#   https://developers.google.com/recaptcha/docs/faq
+_RECAPTCHA_TEST_PUBLIC = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+_RECAPTCHA_TEST_PRIVATE = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_PUBLIC_KEY') or _RECAPTCHA_TEST_PUBLIC
+RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE_KEY') or _RECAPTCHA_TEST_PRIVATE
+# Allow Google's published test keys in local/CI; production should set real keys.
+SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 
 RANKING_OVERALL_WEIGHT = 1.0
 

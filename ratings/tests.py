@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from config.recaptcha_test import VALID_CAPTCHA_POST, mock_recaptcha_valid
 from .templatetags.ratings_tags import score_as_stars, score_as_stars_pct
 from .widgets import StarRatingField
 
@@ -76,7 +77,7 @@ class ScoreAsStarsPctFilterTests(TestCase):
         self.assertEqual(score_as_stars_pct(60), "★★★☆☆")
 
 
-
+class StarRatingFieldTests(TestCase):
     def setUp(self):
         self.field = StarRatingField(required=True)
 
@@ -156,27 +157,43 @@ class RatingValidationTests(TestCase):
         )
 
     def test_missing_required_criterion_is_invalid(self):
+        with mock_recaptcha_valid():
+            form = RatingSubmissionForm(
+                data={
+                    "overall_score": "4",
+                    f"criterion_{self.criterion_a.id}": "4.5",
+                    **VALID_CAPTCHA_POST,
+                },
+                dish=self.dish,
+            )
+            self.assertFalse(form.is_valid())
+            self.assertIn(f"criterion_{self.criterion_b.id}", form.errors)
+
+    def test_out_of_range_criterion_is_invalid(self):
+        with mock_recaptcha_valid():
+            form = RatingSubmissionForm(
+                data={
+                    "overall_score": "4",
+                    f"criterion_{self.criterion_a.id}": "6",
+                    f"criterion_{self.criterion_b.id}": "3.5",
+                    **VALID_CAPTCHA_POST,
+                },
+                dish=self.dish,
+            )
+            self.assertFalse(form.is_valid())
+            self.assertIn(f"criterion_{self.criterion_a.id}", form.errors)
+
+    def test_missing_captcha_is_invalid(self):
         form = RatingSubmissionForm(
             data={
                 "overall_score": "4",
                 f"criterion_{self.criterion_a.id}": "4.5",
-            },
-            dish=self.dish,
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn(f"criterion_{self.criterion_b.id}", form.errors)
-
-    def test_out_of_range_criterion_is_invalid(self):
-        form = RatingSubmissionForm(
-            data={
-                "overall_score": "4",
-                f"criterion_{self.criterion_a.id}": "6",
                 f"criterion_{self.criterion_b.id}": "3.5",
             },
             dish=self.dish,
         )
         self.assertFalse(form.is_valid())
-        self.assertIn(f"criterion_{self.criterion_a.id}", form.errors)
+        self.assertIn("captcha", form.errors)
 
 
 class AuthenticatedSubmissionIntegrationTests(TestCase):
@@ -206,13 +223,15 @@ class AuthenticatedSubmissionIntegrationTests(TestCase):
 
     def test_authenticated_submission_creates_rating(self):
         self.client.login(username="tester", password="password123")
-        response = self.client.post(
-            reverse("ratings:submit", kwargs={"slug": self.dish.slug}),
-            {
-                "overall_score": "4",
-                f"criterion_{self.criterion.id}": "4.5",
-            },
-        )
+        with mock_recaptcha_valid():
+            response = self.client.post(
+                reverse("ratings:submit", kwargs={"slug": self.dish.slug}),
+                {
+                    "overall_score": "4",
+                    f"criterion_{self.criterion.id}": "4.5",
+                    **VALID_CAPTCHA_POST,
+                },
+            )
 
         self.assertEqual(response.status_code, 302)
         submission = RatingSubmission.objects.get()
@@ -221,6 +240,26 @@ class AuthenticatedSubmissionIntegrationTests(TestCase):
         self.assertEqual(
             submission.criterion_scores.get(template=self.criterion).score, Decimal("4.5")
         )
+
+    def test_submission_without_captcha_does_not_save(self):
+        self.client.login(username="tester", password="password123")
+        response = self.client.post(
+            reverse("ratings:submit", kwargs={"slug": self.dish.slug}),
+            {
+                "overall_score": "4",
+                f"criterion_{self.criterion.id}": "4.5",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(RatingSubmission.objects.count(), 0)
+        self.assertIn("captcha", response.context["form"].errors)
+
+    def test_rating_form_uses_invisible_captcha(self):
+        self.client.login(username="tester", password="password123")
+        response = self.client.get(reverse("ratings:submit", kwargs={"slug": self.dish.slug}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-size="invisible"')
+        self.assertNotContains(response, 'data-size="normal"')
 
 
 class UniqueRatingPerUserTests(TestCase):
@@ -251,13 +290,15 @@ class UniqueRatingPerUserTests(TestCase):
 
     def _post_rating(self, overall, criterion_score):
         self.client.login(username="rater", password="password123")
-        return self.client.post(
-            reverse("ratings:submit", kwargs={"slug": self.dish.slug}),
-            {
-                "overall_score": str(overall),
-                f"criterion_{self.criterion.id}": str(criterion_score),
-            },
-        )
+        with mock_recaptcha_valid():
+            return self.client.post(
+                reverse("ratings:submit", kwargs={"slug": self.dish.slug}),
+                {
+                    "overall_score": str(overall),
+                    f"criterion_{self.criterion.id}": str(criterion_score),
+                    **VALID_CAPTCHA_POST,
+                },
+            )
 
     def test_second_submission_updates_not_duplicates(self):
         self._post_rating(3.5, 3)

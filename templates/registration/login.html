@@ -5,9 +5,12 @@
     <h1>Sign in</h1>
     <form method="post">
         {% csrf_token %}
+        {{ form.media }}
         {% for field in form %}
             <div class="form-group">
+                {% if field.label %}
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {% endif %}
                 {{ field }}
                 {{ field.errors }}
             </div>
