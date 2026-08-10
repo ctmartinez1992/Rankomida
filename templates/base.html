@@ -157,6 +157,49 @@
             text-decoration: none;
             box-shadow: var(--shadow-hover);
         }
+        .detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+        .inline-form {
+            display: inline;
+            margin: 0;
+        }
+        .heart-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            padding: 0;
+            border: 2px solid var(--color-border);
+            border-radius: 999px;
+            background: var(--color-surface);
+            color: var(--color-muted);
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.15s;
+            text-decoration: none;
+            vertical-align: middle;
+        }
+        .heart-btn:hover {
+            color: #B54A4A;
+            border-color: #B54A4A;
+            text-decoration: none;
+            transform: scale(1.06);
+        }
+        .heart-btn--saved {
+            color: #B54A4A;
+            border-color: #E8C4C4;
+            background: #FDF6F6;
+        }
+        .heart-btn--saved:hover {
+            color: var(--color-primary);
+            border-color: var(--color-border);
+            background: var(--color-surface);
+        }
 
         /* ── Forms ─────────────────────────────────────────────── */
         .form-group {
@@ -629,6 +672,7 @@
                 <li><a href="{% url 'catalog:venue_list' %}">Venues</a></li>
                 <li><a href="{% url 'leaderboard:list' %}">Leaderboard</a></li>
                 {% if user.is_authenticated %}
+                    <li><a href="{% url 'catalog:saved' %}">Saved</a></li>
                     <li class="nav-user"><a href="{% url 'profile' user.username %}">{{ user.username }}</a></li>
                     <li class="nav-action">
                         <form method="post" action="{% url 'logout' %}">

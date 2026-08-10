@@ -1,16 +1,27 @@
 import logging
 
 from django.conf import settings as django_settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
+from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 
-from .models import Dish, DishType, Venue
+from .models import Dish, DishType, SavedDish, Venue
 from ratings.models import RatingSubmission
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_redirect_url(request, fallback):
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    if next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+    return fallback
 
 
 class DishTypeListView(ListView):
@@ -69,6 +80,17 @@ class DishDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["dish_type"] = self.object.dish_type
+        user = self.request.user
+        if user.is_authenticated:
+            context["user_has_rated"] = RatingSubmission.objects.filter(
+                user=user, dish=self.object
+            ).exists()
+            context["is_saved"] = SavedDish.objects.filter(
+                user=user, dish=self.object
+            ).exists()
+        else:
+            context["user_has_rated"] = False
+            context["is_saved"] = False
         return context
 
 
@@ -128,6 +150,7 @@ class VenueListView(ListView):
     def get_queryset(self):
         qs = (
             Venue.objects
+            .filter(is_published=True)
             .annotate(dish_count=Count("dishes", filter=Q(dishes__is_published=True)))
         )
         city = self.request.GET.get("city", "").strip()
@@ -143,7 +166,11 @@ class VenueListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["cities"] = (
-            Venue.objects.values_list("city", flat=True).distinct().order_by("city")
+            Venue.objects
+            .filter(is_published=True)
+            .values_list("city", flat=True)
+            .distinct()
+            .order_by("city")
         )
         context["selected_city"] = self.request.GET.get("city", "")
         context["search_q"] = self.request.GET.get("q", "")
@@ -155,6 +182,9 @@ class VenueDetailView(DetailView):
     model = Venue
     template_name = "catalog/venue_detail.html"
     context_object_name = "venue"
+
+    def get_queryset(self):
+        return Venue.objects.filter(is_published=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -169,3 +199,42 @@ class VenueDetailView(DetailView):
             .order_by("name")
         )
         return context
+
+
+class SavedDishListView(LoginRequiredMixin, ListView):
+    template_name = "catalog/saved_list.html"
+    context_object_name = "saved_dishes"
+
+    def get_queryset(self):
+        return (
+            SavedDish.objects
+            .filter(user=self.request.user, dish__is_published=True)
+            .select_related("dish", "dish__dish_type", "dish__venue")
+        )
+
+
+@login_required
+@require_POST
+def save_dish(request, slug):
+    dish = get_object_or_404(
+        Dish.objects.select_related("dish_type").filter(is_published=True),
+        slug=slug,
+    )
+    SavedDish.objects.get_or_create(user=request.user, dish=dish)
+    fallback = reverse(
+        "catalog:detail",
+        kwargs={"type_slug": dish.dish_type.slug, "slug": dish.slug},
+    )
+    return redirect(_safe_redirect_url(request, fallback))
+
+
+@login_required
+@require_POST
+def unsave_dish(request, slug):
+    dish = get_object_or_404(Dish.objects.select_related("dish_type"), slug=slug)
+    SavedDish.objects.filter(user=request.user, dish=dish).delete()
+    fallback = reverse(
+        "catalog:detail",
+        kwargs={"type_slug": dish.dish_type.slug, "slug": dish.slug},
+    )
+    return redirect(_safe_redirect_url(request, fallback))

@@ -159,6 +159,9 @@ RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE_KEY') or _RECAPTCHA_TE
 # Allow Google's published test keys in local/CI; production should set real keys.
 SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
 
+# Google Maps Platform key used by the `import_google_places` management command.
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
 RANKING_OVERALL_WEIGHT = 1.0
 
 LOGGING = {

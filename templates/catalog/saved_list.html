@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Saved</h1>
+<div class="card-grid">
+    {% for saved in saved_dishes %}
+        <div class="card">
+            {% include "catalog/_photo.html" with photo=saved.dish.venue.photo alt=saved.dish.venue.name css_class="card-photo" credit=saved.dish.venue.photo_credit source_url=saved.dish.venue.photo_source_url %}
+            <h2><a href="{% url 'catalog:detail' saved.dish.dish_type.slug saved.dish.slug %}">{{ saved.dish.name }}</a></h2>
+            <p class="card-meta">{{ saved.dish.venue.name }} &mdash; {{ saved.dish.venue.city }}</p>
+            <form method="post" action="{% url 'catalog:unsave' saved.dish.slug %}" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'catalog:saved' %}">
+                <button type="submit" class="heart-btn heart-btn--saved" title="Remove from saved" aria-label="Remove from saved">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+                        <path fill="currentColor" d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    {% empty %}
+        <p>No saved dishes yet. Save dishes from their detail page to find them here later.</p>
+    {% endfor %}
+</div>
+{% endblock %}

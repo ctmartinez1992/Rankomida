@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Dish, DishType, Venue, VenueLocation
+from .models import Dish, DishType, SavedDish, Venue, VenueLocation
 
 
 @admin.register(DishType)
@@ -14,13 +14,45 @@ class DishTypeAdmin(admin.ModelAdmin):
 class VenueLocationInline(admin.StackedInline):
     model = VenueLocation
     extra = 1
+    readonly_fields = ("google_place_id", "last_synced_at")
+    fields = (
+        "name",
+        "city",
+        "address",
+        "latitude",
+        "longitude",
+        "postal_code",
+        "neighbourhood",
+        "phone",
+        "website_url",
+        "google_maps_uri",
+        "business_status",
+        "price_level",
+        "primary_type",
+        "types",
+        "opening_hours",
+        "google_rating",
+        "google_user_rating_count",
+        "google_place_id",
+        "last_synced_at",
+    )
 
 
 @admin.register(Venue)
 class VenueAdmin(admin.ModelAdmin):
-    list_display = ("name", "city", "slug")
+    list_display = ("name", "city", "slug", "is_published", "source")
+    list_filter = ("is_published", "source", "city")
     search_fields = ("name", "city", "slug")
-    fields = ("name", "slug", "city", "photo", "photo_credit", "photo_source_url")
+    fields = (
+        "name",
+        "slug",
+        "city",
+        "is_published",
+        "source",
+        "photo",
+        "photo_credit",
+        "photo_source_url",
+    )
     inlines = [VenueLocationInline]
 
 
@@ -40,3 +72,12 @@ class DishAdmin(admin.ModelAdmin):
         "photo_credit",
         "photo_source_url",
     )
+
+
+@admin.register(SavedDish)
+class SavedDishAdmin(admin.ModelAdmin):
+    list_display = ("user", "dish", "saved_at")
+    list_filter = ("saved_at",)
+    search_fields = ("user__username", "dish__name", "dish__slug")
+    autocomplete_fields = ("user", "dish")
+    readonly_fields = ("saved_at",)

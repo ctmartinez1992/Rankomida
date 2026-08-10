@@ -3,7 +3,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from catalog.models import Dish
+from catalog.models import Dish, SavedDish
 
 from .forms import RatingSubmissionForm
 from .models import RatingSubmission
@@ -22,6 +22,7 @@ def submit_rating(request, slug):
         form = RatingSubmissionForm(request.POST, dish=dish, submission=existing)
         if form.is_valid():
             form.save(user=request.user)
+            SavedDish.objects.filter(user=request.user, dish=dish).delete()
             return redirect("catalog:detail", type_slug=dish.dish_type.slug, slug=dish.slug)
         logger.warning(
             "rating.form_invalid user_id=%s dish_slug=%s errors=%s",

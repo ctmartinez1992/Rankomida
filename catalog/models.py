@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -18,9 +19,18 @@ class DishType(models.Model):
 
 
 class Venue(models.Model):
+    SOURCE_MANUAL = "manual"
+    SOURCE_GOOGLE = "google"
+    SOURCE_CHOICES = [
+        (SOURCE_MANUAL, "Manual"),
+        (SOURCE_GOOGLE, "Google Places"),
+    ]
+
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
     city = models.CharField(max_length=120)
+    is_published = models.BooleanField(default=True)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_MANUAL)
     photo = models.ImageField(upload_to='venues/photos/', null=True, blank=True)
     photo_credit = models.CharField(max_length=255, blank=True)
     photo_source_url = models.URLField(blank=True)
@@ -43,6 +53,20 @@ class VenueLocation(models.Model):
     address = models.CharField(max_length=255, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    google_place_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    business_status = models.CharField(max_length=32, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    neighbourhood = models.CharField(max_length=120, blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    website_url = models.URLField(max_length=500, blank=True)
+    google_maps_uri = models.URLField(max_length=500, blank=True)
+    price_level = models.CharField(max_length=32, blank=True)
+    primary_type = models.CharField(max_length=80, blank=True)
+    types = models.JSONField(default=list, blank=True)
+    opening_hours = models.JSONField(null=True, blank=True)
+    google_rating = models.DecimalField(max_digits=2, decimal_places=1, null=True, blank=True)
+    google_user_rating_count = models.PositiveIntegerField(null=True, blank=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["name", "city"]
@@ -77,3 +101,24 @@ class Dish(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.venue.name})"
+
+
+class SavedDish(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="saved_dishes",
+    )
+    dish = models.ForeignKey(
+        Dish,
+        on_delete=models.CASCADE,
+        related_name="saved_by",
+    )
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-saved_at"]
+        unique_together = ("user", "dish")
+
+    def __str__(self) -> str:
+        return f"{self.user} saved {self.dish}"
