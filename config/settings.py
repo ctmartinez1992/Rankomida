@@ -41,6 +41,10 @@ elif DEBUG:
 else:
     ALLOWED_HOSTS = []
 
+_csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+if _csrf_origins_env:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins_env.split(',') if o.strip()]
+
 
 # Application definition
 
