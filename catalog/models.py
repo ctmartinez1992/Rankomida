@@ -10,6 +10,8 @@ class DishType(models.Model):
     photo = models.ImageField(upload_to='dish_types/photos/', null=True, blank=True)
     photo_credit = models.CharField(max_length=255, blank=True)
     photo_source_url = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
@@ -34,6 +36,8 @@ class Venue(models.Model):
     photo = models.ImageField(upload_to='venues/photos/', null=True, blank=True)
     photo_credit = models.CharField(max_length=255, blank=True)
     photo_source_url = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
@@ -67,6 +71,8 @@ class VenueLocation(models.Model):
     google_rating = models.DecimalField(max_digits=2, decimal_places=1, null=True, blank=True)
     google_user_rating_count = models.PositiveIntegerField(null=True, blank=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name", "city"]
@@ -94,6 +100,8 @@ class Dish(models.Model):
     photo = models.ImageField(upload_to='dishes/photos/', null=True, blank=True)
     photo_credit = models.CharField(max_length=255, blank=True)
     photo_source_url = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
@@ -115,6 +123,7 @@ class SavedDish(models.Model):
         related_name="saved_by",
     )
     saved_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-saved_at"]

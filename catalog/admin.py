@@ -9,13 +9,14 @@ class DishTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "is_active")
     list_filter = ("is_active",)
     search_fields = ("name", "slug")
-    fields = ("name", "slug", "description", "is_active", "photo", "photo_credit", "photo_source_url")
+    readonly_fields = ("created_at", "updated_at")
+    fields = ("name", "slug", "description", "is_active", "photo", "photo_credit", "photo_source_url", "created_at", "updated_at")
 
 
 class VenueLocationInline(admin.StackedInline):
     model = VenueLocation
     extra = 1
-    readonly_fields = ("google_place_id", "last_synced_at")
+    readonly_fields = ("google_place_id", "last_synced_at", "created_at", "updated_at")
     fields = (
         "name",
         "city",
@@ -36,6 +37,8 @@ class VenueLocationInline(admin.StackedInline):
         "google_user_rating_count",
         "google_place_id",
         "last_synced_at",
+        "created_at",
+        "updated_at",
     )
 
 
@@ -67,10 +70,11 @@ def unpublish_venues(modeladmin, request, queryset):
 
 @admin.register(Venue)
 class VenueAdmin(admin.ModelAdmin):
-    list_display = ("name", "city", "slug", "is_published", "source")
+    list_display = ("name", "city", "slug", "is_published", "created_at", "updated_at")
     list_filter = ("is_published", "source", "city")
     search_fields = ("name", "city", "slug")
     actions = [publish_venues, unpublish_venues]
+    readonly_fields = ("created_at", "updated_at")
     fields = (
         "name",
         "slug",
@@ -89,6 +93,7 @@ class DishAdmin(admin.ModelAdmin):
     list_display = ("name", "dish_type", "venue", "is_published")
     list_filter = ("dish_type", "is_published")
     search_fields = ("name", "venue__name")
+    readonly_fields = ("created_at", "updated_at")
     fields = (
         "name",
         "slug",
@@ -99,6 +104,8 @@ class DishAdmin(admin.ModelAdmin):
         "photo",
         "photo_credit",
         "photo_source_url",
+        "created_at",
+        "updated_at",
     )
 
 
@@ -108,4 +115,4 @@ class SavedDishAdmin(admin.ModelAdmin):
     list_filter = ("saved_at",)
     search_fields = ("user__username", "dish__name", "dish__slug")
     autocomplete_fields = ("user", "dish")
-    readonly_fields = ("saved_at",)
+    readonly_fields = ("saved_at", "updated_at")

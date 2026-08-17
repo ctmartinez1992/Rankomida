@@ -20,6 +20,8 @@ class CriteriaTemplate(models.Model):
     max_score = models.DecimalField(max_digits=4, decimal_places=1, default=Decimal("5.0"))
     is_required = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["dish_type__name", "key"]
@@ -68,6 +70,8 @@ class RatingCriterionScore(models.Model):
         related_name="scores",
     )
     score = models.DecimalField(max_digits=4, decimal_places=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["template__key"]

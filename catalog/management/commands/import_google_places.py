@@ -23,7 +23,7 @@ from catalog.services.google_places import MAX_PAGES, PlacesError, RequestBudget
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_QUERIES = ["francesinha porto", "prego porto"]
+DEFAULT_QUERIES = ["francesinha porto"]
 DEFAULT_CITY = "Porto"
 
 _COORD_PRECISION = Decimal("0.000001")
