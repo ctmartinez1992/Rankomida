@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rank O Mida</title>
+    <title>Rankomida</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -666,7 +666,7 @@
 <body>
     <header>
         <nav class="container">
-            <a href="{% url 'catalog:list' %}" class="nav-brand">Rank O Mida</a>
+            <a href="{% url 'catalog:list' %}" class="nav-brand">Rankomida</a>
             <ul class="nav-links">
                 <li><a href="{% url 'catalog:list' %}">Dishes</a></li>
                 <li><a href="{% url 'catalog:venue_list' %}">Venues</a></li>
@@ -693,7 +693,7 @@
         </div>
     </main>
     <footer>
-        <div class="container">Rank O Mida</div>
+        <div class="container">© {% now "Y" %} Rankomida. All rights reserved.</div>
     </footer>
 </body>
 </html>
