@@ -10,14 +10,16 @@ import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+import requests
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 from django.utils.text import slugify
 
 from catalog.models import Venue, VenueLocation
-from catalog.services.google_places import MAX_PAGES, PlacesError, search_text
+from catalog.services.google_places import MAX_PAGES, PlacesError, RequestBudget, fetch_photo, search_text
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,17 @@ class Command(BaseCommand):
             action="store_true",
             help="Report what would be written without touching the database.",
         )
+        parser.add_argument(
+            "--max-requests",
+            type=int,
+            default=60,
+            help=(
+                "Maximum total HTTP requests to the Google Maps API per run (default: 60). "
+                "Covers text search pages (1 each), photo metadata (1 each), and photo "
+                "binary downloads (1 each). Use 0 for unlimited. Re-runs skip venues that "
+                "already have photos, so remaining budget goes further on subsequent runs."
+            ),
+        )
 
     def handle(self, *args, **options):
         api_key = getattr(settings, "GOOGLE_MAPS_API_KEY", "")
@@ -75,6 +88,16 @@ class Command(BaseCommand):
         city_fallback = options["city"]
         max_pages = options["max_pages"]
         dry_run = options["dry_run"]
+        budget = RequestBudget(options["max_requests"])
+
+        logger.debug(
+            "places.handle_start queries=%r city=%r max_pages=%d dry_run=%s max_requests=%d",
+            queries,
+            city_fallback,
+            max_pages,
+            dry_run,
+            options["max_requests"],
+        )
 
         if dry_run:
             self.stdout.write(self.style.WARNING("Dry run — no database writes."))
@@ -84,18 +107,22 @@ class Command(BaseCommand):
 
         for query in queries:
             self.stdout.write(f"Query: {query!r}")
+            logger.info("places.query_start query=%r max_pages=%d", query, max_pages)
             try:
                 places = list(
                     search_text(
                         query,
                         api_key=api_key,
                         max_pages=max_pages,
+                        budget=budget,
                     )
                 )
             except PlacesError as exc:
                 logger.error("places.query_failed query=%r error=%s", query, exc)
                 self.stderr.write(self.style.ERROR(f"  Query failed: {exc}"))
                 continue
+
+            logger.info("places.query_done query=%r count=%d", query, len(places))
 
             for place in places:
                 place_id = (place or {}).get("id")
@@ -104,11 +131,12 @@ class Command(BaseCommand):
                     logger.warning("places.skip reason=missing_id")
                     continue
                 if place_id in seen_place_ids:
+                    logger.debug("places.skip reason=duplicate place_id=%s", place_id)
                     continue
                 seen_place_ids.add(place_id)
 
                 try:
-                    outcome = self._process(place, city_fallback, dry_run)
+                    outcome = self._process(place, city_fallback, dry_run, api_key, budget)
                 except Exception as exc:  # one bad place must not lose the batch
                     skipped += 1
                     logger.exception(
@@ -133,8 +161,15 @@ class Command(BaseCommand):
                 f"skipped {skipped}."
             )
         )
+        logger.info(
+            "places.run_complete created=%d updated=%d skipped=%d budget_used=%d",
+            created,
+            updated,
+            skipped,
+            budget.used,
+        )
 
-    def _process(self, place: dict[str, Any], city_fallback: str, dry_run: bool) -> str:
+    def _process(self, place: dict[str, Any], city_fallback: str, dry_run: bool, api_key: str, budget: RequestBudget) -> str:
         fields = _map_place(place, city_fallback)
         place_id = fields["google_place_id"]
         existing = VenueLocation.objects.filter(google_place_id=place_id).first()
@@ -143,6 +178,12 @@ class Command(BaseCommand):
             self.stdout.write(f"  update: {existing.venue.name}")
             if not dry_run:
                 self._apply_location_fields(existing, fields)
+                logger.info(
+                    "places.venue_updated name=%r place_id=%s venue_id=%s",
+                    existing.venue.name,
+                    place_id,
+                    existing.venue_id,
+                )
             return "updated"
 
         name = fields.pop("_name")
@@ -158,7 +199,43 @@ class Command(BaseCommand):
                 )
                 location = VenueLocation(venue=venue)
                 self._apply_location_fields(location, fields)
+            logger.info(
+                "places.venue_created name=%r place_id=%s venue_id=%s",
+                name,
+                place_id,
+                venue.pk,
+            )
+            if not venue.photo:
+                self._fetch_and_save_photo(venue, place, api_key, budget)
+        else:
+            logger.debug("places.dry_run action=create name=%r place_id=%s", name, place_id)
         return "created"
+
+    def _fetch_and_save_photo(self, venue: Venue, place: dict[str, Any], api_key: str, budget: RequestBudget) -> None:
+        photos = place.get("photos") or []
+        if not photos:
+            logger.debug("places.photo_skip reason=no_photos venue_id=%s", venue.pk)
+            return
+        photo_name = photos[0].get("name") if isinstance(photos[0], dict) else None
+        if not photo_name:
+            logger.debug("places.photo_skip reason=no_photo_name venue_id=%s", venue.pk)
+            return
+        # Each photo fetch costs 2 API calls (metadata GET + binary GET).
+        if not budget.consume(2):
+            logger.warning("places.photo_budget_exhausted venue_id=%s", venue.pk)
+            return
+        try:
+            image_bytes = fetch_photo(photo_name, api_key=api_key)
+        except (PlacesError, requests.RequestException) as exc:
+            logger.warning("places.photo_skip venue_id=%s error=%s", venue.pk, exc)
+            return
+        ext = "jpg"
+        filename = f"venue_{venue.pk}.{ext}"
+        venue.photo.save(filename, ContentFile(image_bytes), save=False)
+        venue.photo_credit = "Google Maps"
+        venue.photo_source_url = place.get("googleMapsUri") or ""
+        venue.save(update_fields=["photo", "photo_credit", "photo_source_url"])
+        logger.debug("places.photo_saved venue_id=%s filename=%s", venue.pk, filename)
 
     @staticmethod
     def _apply_location_fields(location: VenueLocation, fields: dict[str, Any]) -> None:

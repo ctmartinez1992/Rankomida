@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.translation import ngettext
 
 from .models import Dish, DishType, SavedDish, Venue, VenueLocation
 
@@ -38,11 +39,38 @@ class VenueLocationInline(admin.StackedInline):
     )
 
 
+@admin.action(description="Publish selected venues")
+def publish_venues(modeladmin, request, queryset):
+    updated = queryset.update(is_published=True)
+    modeladmin.message_user(
+        request,
+        ngettext(
+            "%(count)d venue was published.",
+            "%(count)d venues were published.",
+            updated,
+        ) % {"count": updated},
+    )
+
+
+@admin.action(description="Unpublish selected venues")
+def unpublish_venues(modeladmin, request, queryset):
+    updated = queryset.update(is_published=False)
+    modeladmin.message_user(
+        request,
+        ngettext(
+            "%(count)d venue was unpublished.",
+            "%(count)d venues were unpublished.",
+            updated,
+        ) % {"count": updated},
+    )
+
+
 @admin.register(Venue)
 class VenueAdmin(admin.ModelAdmin):
     list_display = ("name", "city", "slug", "is_published", "source")
     list_filter = ("is_published", "source", "city")
     search_fields = ("name", "city", "slug")
+    actions = [publish_venues, unpublish_venues]
     fields = (
         "name",
         "slug",

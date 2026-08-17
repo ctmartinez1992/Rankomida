@@ -45,7 +45,7 @@ TBD - created by archiving change add-google-places-venue-import. Update Purpose
 - **THEN** that venue's source SHALL indicate manual entry
 
 ### Requirement: Staff can import venues from Google Places by search query
-The system SHALL provide a management command that queries Google Places Text Search for one or more caller-supplied queries and creates a `Venue` and a `VenueLocation` for each distinct place returned. Queries SHALL be supplied as repeatable command arguments and SHALL NOT be derived from dish type names.
+The system SHALL provide a management command that queries Google Places Text Search for one or more caller-supplied queries and creates a `Venue` and a `VenueLocation` for each distinct place returned. The command SHALL also fetch and store a photo for each new venue where one is available, subject to the per-run `--max-requests` budget. Queries SHALL be supplied as repeatable command arguments and SHALL NOT be derived from dish type names. The command SHALL NOT expose a `--max-photos` argument.
 
 #### Scenario: Import creates venue and location per place
 - **WHEN** a staff user runs the command with a query that returns places not already present
@@ -62,6 +62,10 @@ The system SHALL provide a management command that queries Google Places Text Se
 #### Scenario: Venue slugs stay unique
 - **WHEN** an imported place's name generates a slug already taken by an existing venue
 - **THEN** the system SHALL derive a distinct slug and the import SHALL succeed
+
+#### Scenario: Request budget caps total API calls
+- **WHEN** a staff user runs the command with `--max-requests N`
+- **THEN** the command SHALL make no more than N HTTP requests to the Google Maps API across text search and photo fetching combined
 
 ### Requirement: Import paginates within the API result ceiling
 The command SHALL follow Google's page tokens to retrieve additional pages, SHALL wait before using a freshly issued page token, and SHALL stop at a configurable maximum page count not exceeding the API's three-page limit.
@@ -151,4 +155,3 @@ Django admin SHALL display the Google-sourced fields on the venue location inlin
 #### Scenario: Staff can filter unpublished venues
 - **WHEN** a staff user opens the venue list in admin
 - **THEN** they SHALL be able to filter that list by published state
-

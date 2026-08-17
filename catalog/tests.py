@@ -531,3 +531,226 @@ class VenuePublicationVisibilityTests(TestCase):
             reverse("catalog:venue_detail", kwargs={"slug": "hidden-venue"})
         )
         self.assertEqual(detail.status_code, 200)
+
+
+# ---------------------------------------------------------------------------
+# RequestBudget unit tests
+# ---------------------------------------------------------------------------
+
+class RequestBudgetTests(TestCase):
+    """Unit tests for google_places.RequestBudget."""
+
+    def setUp(self):
+        from catalog.services.google_places import RequestBudget
+        self.RequestBudget = RequestBudget
+
+    def test_consume_decrements_correctly(self):
+        b = self.RequestBudget(5)
+        self.assertTrue(b.consume(3))
+        self.assertEqual(b.used, 3)
+        self.assertTrue(b.consume(2))
+        self.assertEqual(b.used, 5)
+
+    def test_consume_returns_false_when_exhausted(self):
+        b = self.RequestBudget(2)
+        self.assertTrue(b.consume(2))
+        self.assertFalse(b.consume(1))
+        self.assertEqual(b.used, 2)  # not incremented on failure
+
+    def test_partial_consume_refused_when_would_exceed(self):
+        b = self.RequestBudget(3)
+        b.consume(2)
+        self.assertFalse(b.consume(2))  # 2+2 > 3
+
+    def test_zero_limit_means_unlimited(self):
+        b = self.RequestBudget(0)
+        for _ in range(1000):
+            self.assertTrue(b.consume(1))
+        self.assertEqual(b.used, 1000)
+
+    def test_exhausted_property(self):
+        b = self.RequestBudget(2)
+        self.assertFalse(b.exhausted)
+        b.consume(2)
+        self.assertTrue(b.exhausted)
+
+    def test_exhausted_false_for_unlimited(self):
+        b = self.RequestBudget(0)
+        b.consume(9999)
+        self.assertFalse(b.exhausted)
+
+
+# ---------------------------------------------------------------------------
+# fetch_photo service tests
+# ---------------------------------------------------------------------------
+
+class FetchPhotoTests(TestCase):
+    """Unit tests for google_places.fetch_photo()."""
+
+    def setUp(self):
+        from catalog.services.google_places import fetch_photo, PlacesError
+        self.fetch_photo = fetch_photo
+        self.PlacesError = PlacesError
+
+    def _make_session(self, meta_status=200, meta_json=None, img_status=200, img_content=b"IMGDATA", network_error=False):
+        session = mock.MagicMock()
+        if network_error:
+            session.get.side_effect = __import__('requests').RequestException("network fail")
+            return session
+        meta_resp = mock.MagicMock()
+        meta_resp.status_code = meta_status
+        if meta_json is not None:
+            meta_resp.json.return_value = meta_json
+        else:
+            meta_resp.json.return_value = {"photoUri": "https://photos.example.com/img.jpg"}
+        meta_resp.text = "error body"
+
+        img_resp = mock.MagicMock()
+        img_resp.status_code = img_status
+        img_resp.content = img_content
+
+        session.get.side_effect = [meta_resp, img_resp]
+        return session
+
+    def test_success_returns_image_bytes(self):
+        session = self._make_session(img_content=b"FAKEIMAGE")
+        result = self.fetch_photo("places/X/photos/Y", api_key="key", session=session)
+        self.assertEqual(result, b"FAKEIMAGE")
+
+    def test_non_200_meta_raises_places_error(self):
+        session = self._make_session(meta_status=403)
+        with self.assertRaises(self.PlacesError):
+            self.fetch_photo("places/X/photos/Y", api_key="key", session=session)
+
+    def test_network_error_raises_places_error(self):
+        session = self._make_session(network_error=True)
+        with self.assertRaises(self.PlacesError):
+            self.fetch_photo("places/X/photos/Y", api_key="key", session=session)
+
+    def test_missing_photo_uri_raises_places_error(self):
+        session = self._make_session(meta_json={"something": "else"})
+        with self.assertRaises(self.PlacesError):
+            self.fetch_photo("places/X/photos/Y", api_key="key", session=session)
+
+    def test_non_200_image_download_raises_places_error(self):
+        session = self._make_session(img_status=500)
+        with self.assertRaises(self.PlacesError):
+            self.fetch_photo("places/X/photos/Y", api_key="key", session=session)
+
+
+# ---------------------------------------------------------------------------
+# import_google_places photo integration tests
+# ---------------------------------------------------------------------------
+
+def _place_with_photo(**overrides):
+    place = _place(**overrides)
+    place["photos"] = [{"name": "places/ChIJsantiago/photos/AXCitest"}]
+    return place
+
+
+@override_settings(GOOGLE_MAPS_API_KEY="test-key")
+class ImportGooglePlacesPhotoTests(TestCase):
+    """Tests for photo fetching behaviour added to the import command."""
+
+    patch_search = "catalog.management.commands.import_google_places.search_text"
+    patch_fetch = "catalog.management.commands.import_google_places.fetch_photo"
+
+    def _run(self, results_by_query, fetch_return=b"IMGDATA", fetch_side_effect=None, extra_args=()):
+        out, err = StringIO(), StringIO()
+        queries = []
+        for query in results_by_query:
+            queries += ["--query", query]
+        with mock.patch(self.patch_search, side_effect=_search_returning(results_by_query)):
+            fetch_kwargs = {}
+            if fetch_side_effect is not None:
+                fetch_kwargs["side_effect"] = fetch_side_effect
+            else:
+                fetch_kwargs["return_value"] = fetch_return
+            with mock.patch(self.patch_fetch, **fetch_kwargs) as mock_fetch:
+                call_command("import_google_places", *queries, *extra_args, stdout=out, stderr=err)
+        return out.getvalue() + err.getvalue(), mock_fetch
+
+    def _tiny_png(self):
+        buf = BytesIO()
+        img = Image.new("RGB", (1, 1), color=(255, 0, 0))
+        img.save(buf, format="JPEG")
+        return buf.getvalue()
+
+    def test_new_venue_with_photo_saves_photo_credit_source_url(self):
+        image_bytes = self._tiny_png()
+        self._run({"q": [_place_with_photo()]}, fetch_return=image_bytes)
+
+        venue = Venue.objects.get()
+        self.assertTrue(bool(venue.photo))
+        self.assertEqual(venue.photo_credit, "Google Maps")
+        self.assertEqual(venue.photo_source_url, "https://maps.google.com/?cid=1")
+
+    def test_new_venue_without_photo_metadata_saves_no_photo(self):
+        self._run({"q": [_place()]})
+
+        venue = Venue.objects.get()
+        self.assertFalse(bool(venue.photo))
+        self.assertEqual(venue.photo_credit, "")
+        self.assertEqual(venue.photo_source_url, "")
+
+    def test_existing_venue_with_photo_skips_fetch(self):
+        from django.core.files.base import ContentFile
+        image_bytes = self._tiny_png()
+        self._run({"q": [_place_with_photo()]}, fetch_return=image_bytes)
+
+        venue = Venue.objects.get()
+        self.assertTrue(bool(venue.photo))
+
+        _, mock_fetch = self._run({"q": [_place_with_photo()]}, fetch_return=image_bytes)
+        # fetch_photo must NOT be called on the re-sync (venue already has photo)
+        mock_fetch.assert_not_called()
+
+    def test_photo_fetch_failure_logs_warning_and_does_not_abort(self):
+        from catalog.services.google_places import PlacesError
+        _, mock_fetch = self._run(
+            {"q": [_place_with_photo()]},
+            fetch_side_effect=PlacesError("fail"),
+        )
+
+        venue = Venue.objects.get()
+        self.assertFalse(bool(venue.photo))
+        mock_fetch.assert_called_once()
+
+    def test_dry_run_does_not_call_fetch_photo(self):
+        _, mock_fetch = self._run({"q": [_place_with_photo()]}, extra_args=("--dry-run",))
+        mock_fetch.assert_not_called()
+        self.assertEqual(Venue.objects.count(), 0)
+
+    def test_max_requests_limit_stops_photo_fetch_after_budget_exhausted(self):
+        """With --max-requests 3, first search page (1) + first photo (2) = 3, second photo refused."""
+        image_bytes = self._tiny_png()
+        place_a = _place_with_photo(place_id="ChIJa", name="Venue A")
+        place_b = _place_with_photo(place_id="ChIJb", name="Venue B")
+        # Budget: 1 search page + 2 photo requests = 3; second photo needs 2 more → refused
+        self._run({"q": [place_a, place_b]}, fetch_return=image_bytes, extra_args=("--max-requests", "3"))
+
+        self.assertEqual(Venue.objects.count(), 2)
+        venues = {v.name: v for v in Venue.objects.all()}
+        self.assertTrue(bool(venues["Venue A"].photo))
+        self.assertFalse(bool(venues["Venue B"].photo))
+
+    def test_max_requests_zero_means_unlimited(self):
+        """--max-requests 0 should not restrict fetches."""
+        image_bytes = self._tiny_png()
+        place_a = _place_with_photo(place_id="ChIJa", name="Venue A")
+        place_b = _place_with_photo(place_id="ChIJb", name="Venue B")
+        self._run({"q": [place_a, place_b]}, fetch_return=image_bytes, extra_args=("--max-requests", "0"))
+
+        venues = {v.name: v for v in Venue.objects.all()}
+        self.assertTrue(bool(venues["Venue A"].photo))
+        self.assertTrue(bool(venues["Venue B"].photo))
+
+    def test_venues_beyond_request_limit_are_still_created(self):
+        """Venues whose photo fetch is refused by budget are still imported as venue+location."""
+        image_bytes = self._tiny_png()
+        place_a = _place_with_photo(place_id="ChIJa", name="Venue A")
+        place_b = _place_with_photo(place_id="ChIJb", name="Venue B")
+        self._run({"q": [place_a, place_b]}, fetch_return=image_bytes, extra_args=("--max-requests", "3"))
+
+        self.assertEqual(Venue.objects.count(), 2)
+        self.assertEqual(VenueLocation.objects.count(), 2)

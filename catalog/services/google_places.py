@@ -36,9 +36,12 @@ FIELD_MASK = ",".join(
         "places.googleMapsUri",
         "places.rating",
         "places.userRatingCount",
+        "places.photos",
         "nextPageToken",
     ]
 )
+
+PHOTO_BASE_URL = "https://places.googleapis.com/v1/{name}/media"
 
 MAX_PAGES = 3
 MAX_PAGE_SIZE = 20
@@ -52,6 +55,39 @@ class PlacesError(RuntimeError):
     """The Places API could not be reached or returned an error."""
 
 
+class RequestBudget:
+    """Tracks and enforces a cap on HTTP requests to the Google Maps API.
+
+    Pass ``limit=0`` for unlimited requests.
+    """
+
+    def __init__(self, limit: int) -> None:
+        self._limit = limit
+        self._used = 0
+
+    def consume(self, n: int = 1) -> bool:
+        """Attempt to consume *n* requests from the budget.
+
+        Returns ``True`` if the requests are allowed and records them.
+        Returns ``False`` (without recording) when the budget is exhausted.
+        """
+        if self._limit == 0:
+            self._used += n
+            return True
+        if self._used + n > self._limit:
+            return False
+        self._used += n
+        return True
+
+    @property
+    def used(self) -> int:
+        return self._used
+
+    @property
+    def exhausted(self) -> bool:
+        return self._limit > 0 and self._used >= self._limit
+
+
 def search_text(
     query: str,
     *,
@@ -62,6 +98,7 @@ def search_text(
     max_pages: int = MAX_PAGES,
     session: requests.Session | None = None,
     sleep: Callable[[float], None] = time.sleep,
+    budget: RequestBudget | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield places matching ``query``, following page tokens up to ``max_pages``."""
     if not api_key:
@@ -78,6 +115,10 @@ def search_text(
 
     token: str | None = None
     for page in range(pages):
+        if budget is not None and not budget.consume(1):
+            logger.warning("places.budget_exhausted stopping_before_page=%s", page + 1)
+            break
+
         payload = dict(payload_base)
         if token:
             payload["pageToken"] = token
@@ -141,6 +182,58 @@ def _post(
         )
 
     raise PlacesError(f"Page token never became valid: {last_message}")
+
+
+def fetch_photo(
+    photo_name: str,
+    *,
+    api_key: str,
+    max_width: int = 800,
+    session: requests.Session | None = None,
+) -> bytes:
+    """Download a photo binary from the Places Photo API.
+
+    ``photo_name`` is the resource path returned in a place's ``photos`` array
+    (e.g. ``places/ChIJ.../photos/AXCi...``).  Returns the raw image bytes.
+    Raises :exc:`PlacesError` on any API or network failure.
+    """
+    http = session or requests.Session()
+    url = PHOTO_BASE_URL.format(name=photo_name)
+    params = {
+        "key": api_key,
+        "maxWidthPx": max_width,
+        "skipHttpRedirect": "true",
+    }
+    try:
+        meta_response = http.get(url, params=params, timeout=REQUEST_TIMEOUT)
+    except requests.RequestException as exc:
+        raise PlacesError(f"Photo metadata request failed: {exc}") from exc
+
+    if meta_response.status_code != 200:
+        raise PlacesError(
+            f"Photo metadata returned HTTP {meta_response.status_code}: "
+            f"{_error_message(meta_response)}"
+        )
+
+    try:
+        photo_uri = meta_response.json().get("photoUri")
+    except ValueError as exc:
+        raise PlacesError("Photo metadata returned a non-JSON response.") from exc
+
+    if not photo_uri:
+        raise PlacesError("Photo metadata response contained no photoUri.")
+
+    try:
+        image_response = http.get(photo_uri, timeout=REQUEST_TIMEOUT)
+    except requests.RequestException as exc:
+        raise PlacesError(f"Photo download failed: {exc}") from exc
+
+    if image_response.status_code != 200:
+        raise PlacesError(
+            f"Photo download returned HTTP {image_response.status_code}."
+        )
+
+    return image_response.content
 
 
 def _error_message(response: requests.Response) -> str:
