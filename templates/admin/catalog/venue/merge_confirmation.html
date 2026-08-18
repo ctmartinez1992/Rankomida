@@ -1,0 +1,104 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>Merge Venues</h1>
+
+<p>
+  You are about to merge <strong>{{ venue_summaries|length }}</strong> venues into one.
+  All locations and dishes from the non-surviving venues will be consolidated into
+  the venue you select below.
+</p>
+
+<form method="post">
+  {% csrf_token %}
+  {% for id in selected_ids %}
+    <input type="hidden" name="selected_ids" value="{{ id }}">
+  {% endfor %}
+
+  <fieldset class="module aligned">
+    <h2>Choose the surviving venue</h2>
+    <div class="form-row">
+      <table>
+        <thead>
+          <tr>
+            <th>Survivor</th>
+            <th>Name</th>
+            <th>City</th>
+            <th>Locations</th>
+            <th>Dishes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for summary in venue_summaries %}
+          <tr>
+            <td style="text-align:center;">
+              <input
+                type="radio"
+                name="survivor_id"
+                value="{{ summary.venue.pk }}"
+                {% if forloop.first %}checked{% endif %}
+                required
+              >
+            </td>
+            <td>{{ summary.venue.name }}</td>
+            <td>{{ summary.venue.city }}</td>
+            <td>{{ summary.location_count }}</td>
+            <td>{{ summary.dish_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </fieldset>
+
+  <fieldset class="module aligned">
+    <h2>Venue name after merge</h2>
+    <div class="form-row">
+      <label for="id_new_name">Name:</label>
+      <input
+        type="text"
+        id="id_new_name"
+        name="new_name"
+        maxlength="200"
+        placeholder="Leave blank to keep the survivor's current name"
+        style="width: 40em;"
+      >
+      <p class="help">
+        Optionally rename the surviving venue. Leave blank to keep its current name.
+        The slug will not change.
+      </p>
+    </div>
+  </fieldset>
+
+  <fieldset class="module aligned">
+    <h2>Impact summary</h2>
+    <div class="form-row">
+      <ul>
+        <li><strong>{{ total_locations }}</strong> location{{ total_locations|pluralize }} will be combined under the survivor.</li>
+        <li><strong>{{ total_dishes }}</strong> dish{{ total_dishes|pluralize }} total across all venues.</li>
+        {% if conflicts %}
+        <li>
+          <strong>{{ conflicts|length }}</strong> dish name{{ conflicts|length|pluralize }}
+          appear in multiple venues and will be <strong>auto-merged</strong> into the survivor's
+          dish (ratings and saved-dish records will be reassigned; duplicate ratings from the same
+          user will be discarded):
+          <ul>
+            {% for name in conflicts %}
+            <li>{{ name }}</li>
+            {% endfor %}
+          </ul>
+        </li>
+        {% else %}
+        <li>✓ No dish name conflicts detected.</li>
+        {% endif %}
+      </ul>
+    </div>
+  </fieldset>
+
+  <div class="submit-row">
+    <input type="submit" name="cancel" value="Cancel" class="default">
+    <input type="submit" value="Merge venues →" class="default" style="float:right; background:#ba2121;">
+  </div>
+</form>
+{% endblock %}

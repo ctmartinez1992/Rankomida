@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Suggest a Venue</h1>
+
+{% if search_q %}
+    <p style="color:var(--color-muted);margin-bottom:1.5rem;">
+        Couldn't find <strong>{{ search_q }}</strong>? Fill in what you know and we'll review it.
+    </p>
+{% else %}
+    <p style="color:var(--color-muted);margin-bottom:1.5rem;">
+        Know a venue that should be listed here? Fill in what you know and we'll review it.
+    </p>
+{% endif %}
+
+<form method="post" style="max-width:560px;">
+    {% csrf_token %}
+
+    {% if authenticated %}
+        <p style="color:var(--color-muted);margin-bottom:1.25rem;font-size:0.9rem;">
+            Submitting as <strong>{{ request.user.username }}</strong>
+        </p>
+    {% endif %}
+
+    {% for field in form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">
+                {{ field.label }}{% if field.field.required %} <span style="color:var(--color-accent);">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+                <small style="color:var(--color-muted);">{{ field.help_text }}</small>
+            {% endif %}
+            {% for error in field.errors %}
+                <p style="color:#c0392b;margin:0.25rem 0 0;font-size:0.875rem;">{{ error }}</p>
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    <div style="margin-top:1.5rem;display:flex;gap:0.75rem;align-items:center;">
+        <button type="submit" class="btn btn-primary">Submit suggestion</button>
+        <a href="{% url 'catalog:venue_list' %}{% if search_q %}?q={{ search_q }}{% endif %}" style="color:var(--color-muted);">Cancel</a>
+    </div>
+</form>
+{% endblock %}

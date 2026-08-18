@@ -6,33 +6,35 @@
     <a href="{% url 'catalog:venue_list' %}">&larr; All Venues</a>
 </nav>
 
-<div class="detail-card">
-    {% include "catalog/_photo.html" with photo=venue.photo alt=venue.name css_class="detail-photo" credit=venue.photo_credit source_url=venue.photo_source_url %}
-    <h1>{{ venue.name }}</h1>
-    <ul class="meta-list">
-        <li><strong>City:</strong> {{ venue.city }}</li>
-    </ul>
-    {% with locations=venue.locations.all %}
-    {% if locations %}
-    <ul class="meta-list">
-        {% for location in locations %}
-        <li>
-            {% if location.name %}<strong>{{ location.name }}</strong> — {% endif %}
-            {{ location.city }}{% if location.address %}, {{ location.address }}{% endif %}
-            {% if location.latitude %}
-                <a href="https://www.google.com/maps/dir/?api=1&destination={{ location.latitude }},{{ location.longitude }}"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   class="btn">Get Directions</a>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
-</div>
+<div class="venue-detail">
+{% with locations=venue.locations.all %}
+    <div class="venue-hero">
+        {% include "catalog/_photo.html" with photo=venue.photo alt=venue.name css_class="detail-photo" credit=venue.photo_credit source_url=venue.photo_source_url %}
+        <h1>{{ venue.name }}</h1>
+        {% if locations|length == 0 %}
+            <p class="venue-hero-meta">{{ venue.city }}</p>
+        {% elif locations|length == 1 %}
+            {% include "catalog/_venue_location_facts.html" with location=locations.0 %}
+        {% else %}
+            <p class="venue-hero-meta">{{ venue.city }} · {{ locations|length }} location{{ locations|length|pluralize }}</p>
+        {% endif %}
+    </div>
 
-<section style="margin-top:2.5rem;">
+    {% if locations|length > 1 %}
+    <section class="venue-locations">
+        <h2>Locations</h2>
+        <div class="card-grid">
+            {% for location in locations %}
+                <div class="card">
+                    {% include "catalog/_venue_location_teaser.html" with location=location %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+{% endwith %}
+
+<section class="venue-dishes">
     <h2>Dishes at {{ venue.name }}</h2>
     {% if dishes %}
         <div class="card-grid">
@@ -56,4 +58,5 @@
         <p style="color:var(--color-muted);margin-top:1rem;">No dishes listed for this venue yet.</p>
     {% endif %}
 </section>
+</div>
 {% endblock %}

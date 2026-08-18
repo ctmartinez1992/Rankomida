@@ -29,7 +29,7 @@
                 <div class="rank-name">
                     <div class="dish-name"><a href="{% url 'profile' submission.user.username %}">{{ submission.user.username }}</a></div>
                     {% if submission.venue_location %}
-                        <div class="venue-name">{{ submission.venue_location }}</div>
+                        <div class="venue-name"><a href="{{ submission.venue_location.get_absolute_url }}">{{ submission.venue_location }}</a></div>
                     {% endif %}
                 </div>
                 <span class="score-badge">{{ submission.created_at|date:"d M Y, H:i" }}</span>

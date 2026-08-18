@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>Reject suggestion(s)</h1>
+
+<div style="margin-bottom:1.5rem;padding:1rem;background:#fff3cd;border-left:4px solid #ffc107;">
+    <strong>Rejecting {{ suggestions|length }} suggestion{{ suggestions|length|pluralize }}:</strong>
+    <ul style="margin:0.5rem 0 0;padding-left:1.25rem;">
+        {% for s in suggestions %}
+            <li>{{ s.name }} — {{ s.city }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+        {% if field.is_hidden %}
+            {{ field }}
+        {% else %}
+            <div style="margin-bottom:1rem;">
+                <label for="{{ field.id_for_label }}"><strong>{{ field.label }}</strong></label>
+                <div style="margin-top:0.5rem;">{{ field }}</div>
+                {% if field.help_text %}
+                    <p style="color:#666;font-size:0.875rem;margin-top:0.25rem;">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                    <p style="color:#ba2121;">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endfor %}
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
+        <input type="submit" value="Confirm rejection" class="default">
+        <button type="submit" name="cancel" class="button cancel-link">Cancel</button>
+    </div>
+</form>
+{% endblock %}

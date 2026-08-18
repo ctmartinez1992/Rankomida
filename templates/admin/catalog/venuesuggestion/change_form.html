@@ -1,0 +1,25 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+    {% if not original.status == 'approved' %}
+        <li>
+            <a href="{{ promote_url }}" class="historylink">
+                Promote to new Venue
+            </a>
+        </li>
+        <li>
+            <a href="{{ add_location_url }}" class="historylink">
+                Add as location of existing Venue
+            </a>
+        </li>
+    {% endif %}
+    {% if original.status != 'rejected' and original.status != 'approved' %}
+        <li>
+            <a href="{{ reject_url }}" class="historylink" style="color:#ba2121;">
+                Reject
+            </a>
+        </li>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

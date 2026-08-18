@@ -9,9 +9,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
 from django.views.decorators.http import require_POST
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, TemplateView
 
-from .models import Dish, DishType, SavedDish, Venue
+from .forms import VenueSuggestionForm
+from .models import Dish, DishType, SavedDish, Venue, VenueLocation, VenueSuggestion
 from ratings.models import RatingSubmission
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class DishDetailView(DetailView):
         return (
             Dish.objects
             .select_related("dish_type", "venue")
+            .prefetch_related("venue__locations")
             .filter(is_published=True)
             .annotate(
                 avg_score=Avg("rating_submissions__overall_score"),
@@ -120,7 +122,7 @@ class CommunityNotesFragmentView(View):
         qs = (
             RatingSubmission.objects
             .filter(dish=dish)
-            .select_related("user", "venue_location")
+            .select_related("user", "venue_location", "venue_location__venue")
             .order_by(ordering)
         )
 
@@ -184,7 +186,7 @@ class VenueDetailView(DetailView):
     context_object_name = "venue"
 
     def get_queryset(self):
-        return Venue.objects.filter(is_published=True)
+        return Venue.objects.filter(is_published=True).prefetch_related("locations")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -198,6 +200,34 @@ class VenueDetailView(DetailView):
             )
             .order_by("name")
         )
+        return context
+
+
+class VenueLocationDetailView(DetailView):
+    model = VenueLocation
+    template_name = "catalog/venue_location_detail.html"
+    context_object_name = "location"
+
+    def get_queryset(self):
+        return (
+            VenueLocation.objects
+            .select_related("venue")
+            .filter(
+                venue__slug=self.kwargs["slug"],
+                venue__is_published=True,
+            )
+        )
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.venue.locations.count() < 2:
+            return redirect("catalog:venue_detail", slug=self.object.venue.slug)
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["venue"] = self.object.venue
         return context
 
 
@@ -238,3 +268,35 @@ def unsave_dish(request, slug):
         kwargs={"type_slug": dish.dish_type.slug, "slug": dish.slug},
     )
     return redirect(_safe_redirect_url(request, fallback))
+
+
+class VenueSuggestionCreateView(View):
+    template_name = "catalog/suggest_venue.html"
+
+    def get(self, request):
+        q = request.GET.get("q", "").strip()
+        authenticated = request.user.is_authenticated
+        initial = {"name": q} if q else {}
+        form = VenueSuggestionForm(initial=initial, authenticated=authenticated)
+        return render(request, self.template_name, {
+            "form": form,
+            "search_q": q,
+            "authenticated": authenticated,
+        })
+
+    def post(self, request):
+        authenticated = request.user.is_authenticated
+        form = VenueSuggestionForm(request.POST, authenticated=authenticated)
+        if form.is_valid():
+            suggestion = form.save(commit=False)
+            suggestion.search_query = request.GET.get("q", "").strip()
+            if authenticated:
+                suggestion.submitted_by = request.user
+            suggestion.save()
+            return redirect(reverse("catalog:suggest_venue_thanks"))
+        q = request.GET.get("q", "").strip()
+        return render(request, self.template_name, {
+            "form": form,
+            "search_q": q,
+            "authenticated": authenticated,
+        })

@@ -18,8 +18,7 @@
             <ul class="venue-locations-compact">
                 {% for location in locations %}
                 <li>
-                    {% if location.name %}{{ location.name }}: {% endif %}
-                    {{ location.city }}{% if location.address %}, {{ location.address }}{% endif %}
+                    <a href="{{ location.get_absolute_url }}">{% if location.name %}{{ location.name }}{% else %}{{ location.city }}{% endif %}</a>{% if location.name %}: {{ location.city }}{% endif %}{% if location.address %}, {{ location.address }}{% endif %}
                     {% if location.latitude %}
                         <a href="https://www.google.com/maps/dir/?api=1&destination={{ location.latitude }},{{ location.longitude }}"
                            target="_blank" rel="noopener noreferrer" class="btn btn-sm">Get Directions</a>

@@ -1,0 +1,87 @@
+{% load catalog_tags %}
+{% if not skip_heading %}
+{% with heading=location|location_heading:venue %}
+{% if as_card %}
+    <h3 class="location-card-title">{{ heading|default:location.city }}</h3>
+{% elif heading %}
+    <p class="location-branch-name">{{ heading }}</p>
+{% endif %}
+{% endwith %}
+{% endif %}
+
+<div class="location-facts">
+    {% with price=location.price_level|price_level_display status=location.business_status|business_status_label ptype=location.primary_type|humanize_place_type %}
+    {% if price or status or ptype %}
+    <div class="venue-hero-meta">
+        {% if ptype %}<span class="venue-chip">{{ ptype }}</span>{% endif %}
+        {% if price %}<span class="venue-chip">{{ price }}</span>{% endif %}
+        {% if status %}<span class="venue-chip venue-chip--warning">{{ status }}</span>{% endif %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% if location.neighbourhood or location.city %}
+    <p class="location-place-line">
+        {% if location.neighbourhood %}{{ location.neighbourhood }}{% endif %}
+        {% if location.neighbourhood and location.city %} · {% endif %}
+        {% if location.city %}{{ location.city }}{% endif %}
+    </p>
+    {% endif %}
+
+    {% if location.address or location.postal_code %}
+    <p class="location-address">
+        {{ location.address }}{% if location.address and location.postal_code %}, {% endif %}{{ location.postal_code }}
+    </p>
+    {% endif %}
+
+    {% if location.phone or location.website_url or location.latitude or location.google_maps_uri %}
+    <div class="location-actions">
+        {% if location.phone %}
+            <a href="{{ location.phone|tel_href }}">{{ location.phone }}</a>
+        {% endif %}
+        {% if location.website_url %}
+            <a href="{{ location.website_url }}" target="_blank" rel="noopener noreferrer">Website</a>
+        {% endif %}
+        {% if location.latitude %}
+            <a href="https://www.google.com/maps/dir/?api=1&destination={{ location.latitude }},{{ location.longitude }}"
+               target="_blank"
+               rel="noopener noreferrer">Get Directions</a>
+        {% endif %}
+        {% if location.google_maps_uri %}
+            <a href="{{ location.google_maps_uri }}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if location.google_rating %}
+    <p class="location-google-rating">
+        Google <strong>{{ location.google_rating }}</strong>
+        {% if location.google_user_rating_count %}
+            ({{ location.google_user_rating_count }} review{{ location.google_user_rating_count|pluralize }})
+        {% endif %}
+    </p>
+    {% endif %}
+
+    {% with hours=location.opening_hours|weekday_hours %}
+    {% if hours %}
+    <div>
+        <p class="location-hours-label">Hours</p>
+        <ul class="location-hours">
+            {% for line in hours %}
+            <li>{{ line }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% with chips=location.types|public_place_types:location.primary_type %}
+    {% if chips %}
+    <div class="location-type-chips">
+        {% for chip in chips %}
+            <span class="venue-chip">{{ chip }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+</div>

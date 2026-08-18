@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1>Add as location of existing venue</h1>
+
+<div style="margin-bottom:1.5rem;padding:1rem;background:#f8f8f8;border-left:4px solid #ddd;">
+    <strong>Suggestion:</strong> {{ suggestion.name }}, {{ suggestion.city }}
+    {% if suggestion.address %}<br><small>{{ suggestion.address }}</small>{% endif %}
+    {% if suggestion.website_url %}<br><small><a href="{{ suggestion.website_url }}" target="_blank">{{ suggestion.website_url }}</a></small>{% endif %}
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div style="margin-bottom:1rem;">
+        <label for="{{ form.venue.id_for_label }}"><strong>{{ form.venue.label }}</strong></label>
+        <div style="margin-top:0.5rem;">{{ form.venue }}</div>
+        {% if form.venue.help_text %}
+            <p style="color:#666;font-size:0.875rem;margin-top:0.25rem;">{{ form.venue.help_text }}</p>
+        {% endif %}
+        {% for error in form.venue.errors %}
+            <p style="color:#ba2121;">{{ error }}</p>
+        {% endfor %}
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.5rem;">
+        <input type="submit" value="Add location" class="default">
+        <button type="submit" name="cancel" class="button cancel-link">Cancel</button>
+    </div>
+</form>
+{% endblock %}

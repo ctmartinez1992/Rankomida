@@ -24,4 +24,40 @@
         hx-swap="innerHTML"
     ></div>
 </section>
+
+{% if request.user == profile_user %}
+    {% with suggestions=profile_user.venue_suggestions.all %}
+        {% if suggestions %}
+            <section style="margin-top:2.5rem;">
+                <h2>Venue Suggestions</h2>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:1rem;">
+                    {% for s in suggestions %}
+                        <div style="padding:0.875rem 1rem;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                                <span style="font-weight:500;">{{ s.name }}<span style="color:var(--color-muted);font-weight:400;"> · {{ s.city }}</span></span>
+                                {% if s.status == 'approved' %}
+                                    <span style="font-size:0.8rem;padding:0.2rem 0.6rem;border-radius:999px;background:#d4edda;color:#155724;">Approved</span>
+                                {% elif s.status == 'rejected' %}
+                                    <span style="font-size:0.8rem;padding:0.2rem 0.6rem;border-radius:999px;background:#f8d7da;color:#721c24;">Rejected</span>
+                                {% elif s.status == 'duplicate' %}
+                                    <span style="font-size:0.8rem;padding:0.2rem 0.6rem;border-radius:999px;background:#e2e3e5;color:#383d41;">Duplicate</span>
+                                {% else %}
+                                    <span style="font-size:0.8rem;padding:0.2rem 0.6rem;border-radius:999px;background:#fff3cd;color:#856404;">Pending review</span>
+                                {% endif %}
+                            </div>
+                            {% if s.status == 'approved' and s.promoted_venue and s.promoted_venue.is_published %}
+                                <p style="margin:0.5rem 0 0;font-size:0.875rem;">
+                                    <a href="{% url 'catalog:venue_detail' s.promoted_venue.slug %}">View venue: {{ s.promoted_venue.name }} →</a>
+                                </p>
+                            {% endif %}
+                            {% if s.status == 'rejected' and s.rejection_reason %}
+                                <p style="margin:0.5rem 0 0;font-size:0.875rem;color:var(--color-muted);">{{ s.rejection_reason }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    {% endwith %}
+{% endif %}
 {% endblock %}

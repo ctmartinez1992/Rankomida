@@ -1,0 +1,26 @@
+{% load catalog_tags %}
+{% with heading=location|location_heading:venue %}
+<h3 class="location-card-title">
+    <a href="{{ location.get_absolute_url }}">{{ heading|default:location.city }}</a>
+</h3>
+{% endwith %}
+
+{% with status=location.business_status|business_status_label %}
+{% if status %}
+<div class="venue-hero-meta">
+    <span class="venue-chip venue-chip--warning">{{ status }}</span>
+</div>
+{% endif %}
+{% endwith %}
+
+{% if location.neighbourhood or location.city %}
+<p class="location-place-line">
+    {% if location.neighbourhood %}{{ location.neighbourhood }}{% endif %}
+    {% if location.neighbourhood and location.city %} · {% endif %}
+    {% if location.city %}{{ location.city }}{% endif %}
+</p>
+{% endif %}
+
+{% if location.address %}
+<p class="location-address">{{ location.address }}</p>
+{% endif %}

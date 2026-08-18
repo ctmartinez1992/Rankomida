@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load catalog_tags %}
+
+{% block content %}
+{% with heading=location|location_heading:venue %}
+<nav class="breadcrumb">
+    <a href="{% url 'catalog:venue_list' %}">All Venues</a>
+    <span class="breadcrumb-sep" aria-hidden="true">→</span>
+    <a href="{% url 'catalog:venue_detail' venue.slug %}">{{ venue.name }}</a>
+    <span class="breadcrumb-sep" aria-hidden="true">→</span>
+    <span>{{ heading|default:location.city }}</span>
+</nav>
+
+<div class="detail-card">
+    <h1>{{ heading|default:location.city }}</h1>
+    <p class="venue-hero-meta">
+        <a href="{% url 'catalog:venue_detail' venue.slug %}">{{ venue.name }}</a>
+    </p>
+    {% include "catalog/_venue_location_facts.html" with location=location skip_heading=True %}
+</div>
+{% endwith %}
+{% endblock %}

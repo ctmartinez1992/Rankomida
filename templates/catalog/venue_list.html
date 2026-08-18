@@ -46,5 +46,12 @@
     </div>
 {% else %}
     <p style="color:var(--color-muted);margin-top:2rem;">No venues found{% if selected_city or search_q %} matching your filters{% endif %}.</p>
+    {% if selected_city or search_q %}
+        <p style="margin-top:0.75rem;">
+            <a href="{% url 'catalog:suggest_venue' %}{% if search_q %}?q={{ search_q }}{% endif %}">
+                Suggest a venue →
+            </a>
+        </p>
+    {% endif %}
 {% endif %}
 {% endblock %}

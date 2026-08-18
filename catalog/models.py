@@ -81,6 +81,14 @@ class VenueLocation(models.Model):
         label = self.name or self.city
         return f"{self.venue.name} — {label}"
 
+    def get_absolute_url(self):
+        from django.urls import reverse
+
+        return reverse(
+            "catalog:venue_location_detail",
+            kwargs={"slug": self.venue.slug, "pk": self.pk},
+        )
+
 
 class Dish(models.Model):
     name = models.CharField(max_length=200)
@@ -131,3 +139,49 @@ class SavedDish(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} saved {self.dish}"
+
+
+class VenueSuggestion(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_DUPLICATE = "duplicate"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_DUPLICATE, "Duplicate"),
+    ]
+
+    name = models.CharField(max_length=200)
+    city = models.CharField(max_length=120)
+    address = models.CharField(max_length=255, blank=True)
+    website_url = models.URLField(blank=True)
+    notes = models.TextField(blank=True)
+    submitter_name = models.CharField(max_length=120, blank=True)
+    submitter_email = models.EmailField(blank=True)
+    search_query = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="venue_suggestions",
+    )
+    rejection_reason = models.TextField(blank=True)
+    promoted_venue = models.ForeignKey(
+        Venue,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="suggested_from",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.city})"
